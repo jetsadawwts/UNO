@@ -1,2 +1,24 @@
+# ─────────────────────────────────────────────
+# UNO — personal Claude Code plugin marketplace
+# ─────────────────────────────────────────────
+
+# Company data: never commit (lives on this machine only)
 registry/projects.yaml
-registry/projects.yaml
+
+# macOS
+.DS_Store
+._*
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Local scratch
+*.log
+*.tgz
+*.zip
