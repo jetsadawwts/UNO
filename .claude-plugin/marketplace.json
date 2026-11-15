@@ -1,0 +1,11 @@
+{
+  "name": "uno",
+  "owner": { "name": "your-org" },
+  "plugins": [
+    {
+      "name": "core",
+      "source": "./plugins/core",
+      "description": "UNO core: portfolio scan, onboarding, work, new project, refactor, zone + git guards"
+    }
+  ]
+}

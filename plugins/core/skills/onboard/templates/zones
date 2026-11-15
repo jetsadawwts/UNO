@@ -1,0 +1,22 @@
+# UNO zones — read by the guard-zones hook.
+# One glob per line, relative to the project root. Lines starting with # are comments.
+# [forbidden]: agents may not edit or create files here. Humans only.
+# [review]:    agents may edit, but every edit is logged and the PR needs Security sign-off.
+# Everything not listed is a normal zone.
+
+[forbidden]
+.uno/zones
+.uno/audit.log
+.env
+.env.*
+**/secrets/**
+**/*.pem
+**/*.key
+# vendor-maintained module, example:
+# src/his-adapter/**
+
+[review]
+**/migrations/**
+**/auth/**
+# patient-data paths found in discovery, example:
+# src/patients/**
