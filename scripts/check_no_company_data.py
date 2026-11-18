@@ -55,8 +55,16 @@ def added_lines():
             yield current, line[1:]
 
 
+def added_files():
+    out = subprocess.run(["git", "diff", "--cached", "--name-only", "--diff-filter=A"], capture_output=True, text=True, cwd=ROOT).stdout
+    return [p for p in out.splitlines() if p]
+
+
 def main():
     bad = []
+    for p in added_files():
+        if p.split("/")[-1] in (".DS_Store", "Thumbs.db"):
+            bad.append((p, "OS junk file (folder listing)", p))
     words = terms()
     for path, text in added_lines():
         low = text.lower()

@@ -1,7 +1,7 @@
 # Project profile: <project-name>
 
 > Tags: `[seen]` read in code · `[inferred]` deduced · `[unknown]` needs a human · `[confirmed]` verified by owner
-> Tier: <open | internal | sensitive> · Owner: <name> · UNO release: <vX.Y> · Last reviewed: <YYYY-MM-DD>
+> Tier: <open | internal | sensitive> · Review: <self | second-reviewer> · Owner: <name> · UNO release: <vX.Y> · Last reviewed: <YYYY-MM-DD>
 
 ## 0. Purpose
 - What the system does, for whom:
@@ -42,7 +42,7 @@
 - Auth and access control model:
 - Secrets handling (any found in repo → list path, rotate):
 - Sensitive fields that appear in logs:
-- Compliance notes (PDPA, hospital policy):
+- Compliance notes (e.g. PDPA, company or client policy):
 
 ## 6. Quality
 - Test types present and how to run:

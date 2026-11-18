@@ -1,6 +1,6 @@
 # UNO project playbook (v0.4.0)
 
-UNO is **JWT's personal tool**, not shared with the team. Its files live on this machine only: the plugin in `~/UNO/uno`, and per project `.uno/`, `CLAUDE.md` and `.claude/settings.local.json`, all kept out of shared repos through `.git/info/exclude`. Shared rules that protect everyone (branch protection, teammate review of risky PRs) live on the remote, not in UNO.
+UNO is **JWT's personal tool**, not shared with the team. Its files live on this machine only: the plugin in `~/UNO/uno`, and per project `.uno/`, `CLAUDE.md` and `.claude/settings.local.json`, all kept out of shared repos through `.git/info/exclude`. Project data lives in `~/UNO/data/<project>/` (linked into each project as `.uno`): back it up locally, never push it. Review is `self` by default (you review your own PRs, guided by the `review: careful | quick` label); a repo that requires another approver is set to `second-reviewer`.
 
 UNO is the **org layer**: which project, how risky, what agents may touch, how much autonomy. How a single task is coded is delegated to the [Superpowers](https://github.com/obra/superpowers) skills when they are installed; without them `/core:work` falls back to a built-in Plan → Act → Verify → Reflect loop.
 
@@ -84,8 +84,8 @@ portfolio-scan  →  registry (human)  →  onboard, per project, wave by wave
 | Tier | Use for | Extra rules on top of the always-on guards |
 |---|---|---|
 | `open` | your own or open-source code, no company or personal data | none; L3 allowed; UNO files may be committed if the repo is yours |
-| `internal` | company or client code without personal data | UNO files stay local; risk-based teammate review; up to L3 |
-| `sensitive` | personal or regulated data: health, identity, finance, HR, children | Epsilon on every PR; UI tasks count as review zone; teammate review; max L2 |
+| `internal` | company or client code without personal data | UNO files stay local; risk-based review label; up to L3 |
+| `sensitive` | personal or regulated data: health, identity, finance, HR, children | Epsilon on every PR; UI tasks count as review zone; always `review: careful`; max L2 |
 
 **Always-on guards, every tier:** secrets cannot be read (`.env`, `*.ini`, `*.pem`, `*.key`, credentials), installs ask first, `guard_zones`, `guard_git`, `trace_agents`, third-party plugins listed in `THIRD_PARTY.md`, and this repo refuses commits that carry company or personal data (`scripts/check_no_company_data.py`).
 

@@ -13,11 +13,12 @@ All outputs go to `.uno/` in the project root plus a `CLAUDE.md`. Status is trac
 
 - Look up the project in the UNO registry (`registry/projects.yaml`). Use its `tier` and `wave`.
 - Not registered → stop and ask the CTO to run `portfolio-scan` or add the entry. Do not guess the tier.
+- Keep project data in one backed-up place: create `~/UNO/data/<project>/` and link it with `ln -s ~/UNO/data/<project> .uno` from the project root. If `.uno/` already exists as a folder, move its files into the data folder first. `~/UNO/data` holds company details: back it up (e.g. Time Machine), never push it to a personal remote.
 - Create `.uno/onboarding.md` from `templates/onboarding.md`. Mark Phase 0 done.
 
 ## Phase 1 — Discovery (read-only)
 
-Hard rule: no edits to project code, no installs, no migrations, no network calls to production, no running code that touches real data. Reading files, `git log`, and listing dependencies is allowed. Running the existing test suite is allowed only if the profile is `standard` tier or the CTO says yes.
+Hard rule: no edits to project code, no installs, no migrations, no network calls to production, no running code that touches real data. Reading files, `git log`, and listing dependencies is allowed. Running the existing test suite is allowed for `open` and `internal` tier, and for `sensitive` only if the owner says yes.
 
 Run each lens as a separate pass (subagent if available) and write findings into the profile sections:
 
@@ -45,6 +46,7 @@ Output: `.uno/project-profile.md` from `templates/project-profile.md`, and a dra
 Stop and hand over to the project owner with:
 - the profile, with every `[inferred]` and `[unknown]` listed as questions
 - proposed zones, especially anything marked `forbidden`
+- proposed `Tier` and `Review` for the profile header. For `Review`, check whether the default branch requires approvals: `gh api repos/<owner>/<repo>/branches/<default>/protection --jq .required_pull_request_reviews.required_approving_review_count`. A number ≥ 1 → propose `second-reviewer`; no protection, 0, or the check fails → propose `self` and say the check could not confirm it.
 - the top 5 risks found
 
 Do not continue until the owner has corrected the profile and written `approved-by` and date in `.uno/onboarding.md`. Corrections from the owner become `[confirmed]`.
@@ -58,7 +60,7 @@ Only after approval:
 2. Ask the owner to review `.uno/zones.draft` and rename it to `.uno/zones` themselves. Once it exists the `guard_zones` hook enforces it, and agents can no longer edit it.
 3. Write `.claude/settings.local.json` with the `permissions` block of the tier template (`new-project/templates/settings.<tier>.json`). Replace `<default-branch>` with the repo's real default branch (`git symbolic-ref --short refs/remotes/origin/HEAD`); do not assume `main`. Do not add marketplace or plugin entries: `core@uno` is installed at user scope.
 4. Create `.uno/tasks.md` from `work/templates/tasks.md`.
-5. Keep these files out of the shared repo without touching its `.gitignore`: append `.uno/`, `CLAUDE.md` and `.claude/settings.local.json` to `.git/info/exclude`. If the repo already tracks a `CLAUDE.md` owned by the team, write UNO's notes to `.uno/CLAUDE.uno.md` instead and add `@.uno/CLAUDE.uno.md` to nothing shared — tell the owner so they can decide.
+5. Keep these files out of the shared repo without touching its `.gitignore`: append `.uno` (no trailing slash, so the symlink matches), `CLAUDE.md` and `.claude/settings.local.json` to `.git/info/exclude`. If the repo already tracks a `CLAUDE.md` owned by the team, write UNO's notes to `.uno/CLAUDE.uno.md` instead and add `@.uno/CLAUDE.uno.md` to nothing shared — tell the owner so they can decide.
 6. No setup PR. Report to the owner what was written and that `git status` shows none of it.
 
 ## Phase 4 — Baseline
