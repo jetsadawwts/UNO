@@ -1,6 +1,6 @@
 # <project-name>
 
-<One line: what this system does and for whom.> Tier: <standard | clinical>. Owner: <name>.
+<One line: what this system does and for whom.> Tier: <open | internal | sensitive>. Owner: <name>.
 
 ## Commands
 - Install: `<cmd>`
@@ -20,10 +20,10 @@ See `.uno/zones`. Forbidden paths are human-only; review paths need Security sig
 ## Ask before
 - adding a dependency
 - changing a database schema or migration
-- anything touching auth, patient data, or external integrations
+- anything touching auth, personal/sensitive data, or external integrations
 
 ## Never
-- use real patient data in code, tests, fixtures or logs
+- use real personal data in code, tests, fixtures or logs
 - commit secrets
 - push to the default branch, or commit on it
 

@@ -1,6 +1,6 @@
 # UNO team roster
 
-AI team members are named in lifecycle order. People hold **roles** (`owner`, `tech-lead`, `qa`, `clinical-user`, `security`, `ops`, `change-approver`); AI members only help those roles and never approve.
+AI team members are named in lifecycle order. People hold **roles** (`owner`, `tech-lead`, `qa`, `domain-user`, `security`, `ops`, `change-approver`); AI members only help those roles and never approve.
 
 | Name | Code | Job | Helps role | Status |
 |---|---|---|---|---|

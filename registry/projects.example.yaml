@@ -1,11 +1,11 @@
 # UNO project registry. One entry per project. Humans own tier, wave, owner and autonomy.
-# Autonomy: L1 suggest · L2 open PRs, human reviews every PR · L3 auto-merge low-risk (never for clinical tier)
+# Autonomy: L1 suggest · L2 open PRs, human reviews every PR · L3 auto-merge low-risk (never for sensitive tier)
 
 projects:
   - name: internal-wiki
     repo: your-org/internal-wiki
     owner: <name>
-    tier: standard          # standard | clinical
+    tier: internal          # open | internal | sensitive
     wave: 1
     autonomy: L1
     plugins: [core]
@@ -16,10 +16,10 @@ projects:
   - name: patient-journey
     repo: your-org/patient-journey
     owner: <name>
-    tier: clinical
+    tier: sensitive
     wave: 2
-    autonomy: L1            # clinical tier caps at L2
-    plugins: [core]          # clinical rules live in core (tier: clinical)
+    autonomy: L1            # sensitive tier caps at L2
+    plugins: [core]          # tier rules live in core
     uno_release: v0.2.0
     onboarding: not-started
     notes: "patient data in src/patients, HIS integration"

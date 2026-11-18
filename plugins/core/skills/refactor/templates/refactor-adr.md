@@ -3,7 +3,7 @@
 - **Status**: proposed | accepted | done | abandoned
 - **Date**:
 - **Owner**:
-- **Tier**: standard | clinical
+- **Tier**: open | internal | sensitive
 
 ## Pain today
 What is hard, slow, risky or expensive, with evidence (incidents, lead time, bug count, review comments).

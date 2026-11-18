@@ -18,5 +18,6 @@
 [review]
 **/migrations/**
 **/auth/**
-# patient-data paths found in discovery, example:
+# personal/sensitive-data paths found in discovery, example:
 # src/patients/**
+# src/payroll/**

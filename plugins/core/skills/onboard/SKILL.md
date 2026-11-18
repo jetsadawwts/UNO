@@ -25,7 +25,7 @@ Run each lens as a separate pass (subagent if available) and write findings into
 |---|---|---|
 | Tech Lead | architecture, modules, entry points, build/deploy, real conventions (from code, not docs) | 1, 2, 3 |
 | Backend/Integration | data stores, external systems (HIS, HL7/FHIR, LIS/PACS, card readers), jobs, APIs | 4 |
-| Security | where patient data flows, secrets in repo, auth model, logging of sensitive fields | 5 |
+| Security | where personal or sensitive data flows, secrets in repo, auth model, logging of sensitive fields | 5 |
 | QA | test types, how to run them, coverage gaps, flaky areas | 6 |
 | DevOps/SRE | environments, CI/CD, config, observability | 3, 7 |
 | SA | what the system is for, who uses it, known pain points from issues/commits | 0 |

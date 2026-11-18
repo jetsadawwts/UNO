@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/secrets/**)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./**/*.ini)",
+      "Read(./**/*.p12)",
+      "Read(./**/*credentials*)",
+      "Bash(git push origin <default-branch>:*)",
+      "Bash(git push --force:*)",
+      "Bash(rm -rf:*)"
+    ],
+    "ask": [
+      "Bash(npm install:*)",
+      "Bash(pnpm add:*)",
+      "Bash(yarn add:*)",
+      "Bash(pip install:*)",
+      "Bash(dotnet add:*)",
+      "Bash(npx skills:*)",
+      "Bash(npm install -g:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)"
+    ]
+  }
+}

@@ -4,6 +4,7 @@
 
 # Company data: never commit (lives on this machine only)
 registry/projects.yaml
+.forbidden-terms
 
 # macOS
 .DS_Store

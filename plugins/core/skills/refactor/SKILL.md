@@ -43,7 +43,7 @@ For each step run the UNO inner loop (act → verify → reflect, max 3 tries, t
 - title prefix `refactor:`; description links the ADR and plan step
 - no feature changes, no bug fixes, no formatting sweeps mixed in — log anything found in the plan's "Found along the way" list
 - tests: characterization + existing suite pass; changed lines covered
-- clinical tier: E2E regression on critical flows and Security sign-off before merge
+- sensitive tier: E2E regression on critical flows and Security sign-off before merge
 
 Update the plan's checklist after each merge.
 

@@ -1,7 +1,7 @@
 # Project profile: <project-name>
 
 > Tags: `[seen]` read in code · `[inferred]` deduced · `[unknown]` needs a human · `[confirmed]` verified by owner
-> Tier: <standard | clinical> · Owner: <name> · UNO release: <vX.Y> · Last reviewed: <YYYY-MM-DD>
+> Tier: <open | internal | sensitive> · Owner: <name> · UNO release: <vX.Y> · Last reviewed: <YYYY-MM-DD>
 
 ## 0. Purpose
 - What the system does, for whom:
@@ -37,8 +37,8 @@
 - Databases and main tables:
 - Scheduled jobs:
 
-## 5. Security and patient data
-- Where patient data enters, is stored, leaves (paths only, never sample values):
+## 5. Security and sensitive data
+- Where personal/sensitive data enters, is stored, leaves (paths only, never sample values):
 - Auth and access control model:
 - Secrets handling (any found in repo → list path, rotate):
 - Sensitive fields that appear in logs:
@@ -65,3 +65,7 @@
 
 ## 10. Open questions for the owner
 - [ ]
+
+## Display rules for sensitive fields
+<!-- Project-specific rules Gamma and Epsilon must follow, e.g. "HN always shown in full, never truncated";
+     "amounts always with currency and 2 decimals"; "employee ID masked except last 4". Leave empty if none. -->

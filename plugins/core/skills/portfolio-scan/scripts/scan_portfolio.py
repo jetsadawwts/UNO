@@ -25,9 +25,11 @@ LANG_BY_EXT = {
     ".dart": "Dart", ".swift": "Swift", ".cpp": "C++", ".c": "C", ".rs": "Rust",
 }
 
-# Signals that a codebase handles patient data. A hit means "needs clinical review", not proof.
+# Signals that a codebase handles personal or sensitive data (health, identity, finance, HR).
+# A hit means "needs sensitive-tier review", not proof.
 PHI_PATTERNS = re.compile(
-    r"\b(patient|hn\b|hospital_?number|national_?id|citizen_?id|\bcid\b|id_?card|"
+    r"\b(passport|ssn\b|tax_?id|salary|payroll|credit_?card|card_?number|bank_?account|iban\b|employee_?id|"
+    r"patient|hn\b|hospital_?number|national_?id|citizen_?id|\bcid\b|id_?card|"
     r"hl7|fhir|diagnos|icd_?10|date_?of_?birth|\bdob\b|allerg|prescri|lab_?result|"
     r"medical_?record|\bemr\b|\behr\b|\bhis\b)|ผู้ป่วย|เลขบัตรประชาชน|การวินิจฉัย",
     re.IGNORECASE,
@@ -142,15 +144,15 @@ def scan_repo(path):
 
 def classify(p):
     """Suggest tier and onboarding wave. A human confirms both in registry/projects.yaml."""
-    clinical = p["phi_signal_files"] > 0
+    sensitive = p["phi_signal_files"] > 0
     active = p["commits_90d"] > 0
-    tier = "clinical" if clinical else "standard"
+    tier = "sensitive" if sensitive else "internal"  # `open` is set by a human
     if not p["is_git"]:
         wave, why = "hold", "not a git repo: put under version control first"
-    elif active and not clinical:
-        wave, why = "1", "active, no patient-data signals: safest place to tune UNO"
-    elif active and clinical:
-        wave, why = "2", "active, touches patient data: onboard after wave 1 lessons"
+    elif active and not sensitive:
+        wave, why = "1", "active, no personal-data signals: safest place to tune UNO"
+    elif active and sensitive:
+        wave, why = "2", "active, touches personal/sensitive data: onboard after wave 1 lessons"
     else:
         wave, why = "3", "inactive: onboard only when work arrives"
     flags = []

@@ -12,7 +12,7 @@ UNO decides **what** may be done and **how safe** it must be. The Superpowers sk
 - `.uno/zones` and `.uno/tasks.md` exist. Missing → the project is not onboarded; tell the user to run `/core:onboard`.
 - Read the project's registry entry (`tier`, `autonomy`) and `CLAUDE.md`.
 - The task is in `.uno/tasks.md` with status `ready` or `in-progress`. A request that is not in the backlog: add it as a new row with status `proposed` and stop until a human marks it `ready`.
-- The task's level is allowed: L1 → you may only propose a diff or plan in chat and open a PR the human reviews; never merge. `clinical` tier caps at L2 and never auto-merges.
+- The task's level is allowed: L1 → you may only propose a diff or plan in chat and open a PR the human reviews; never merge. `sensitive` tier caps at L2 and never auto-merges; `internal` and `open` may reach L3.
 
 ## 1. Pick the mode
 
@@ -52,7 +52,7 @@ Write the chosen mode and the reason into the task row. When unsure, use **full*
 - No feature work and bug fixes in the same branch. No refactor mixed with behaviour change.
 - Any subagent you start gets a brief in the format of `references/subagent-brief.md`. Team names and codes are in `references/team.md`; refer to members as `Name (code)`.
 - Files in a `review` zone: when done, run Epsilon (`security-reviewer`) on the diff and paste its verdict in the PR.
-- UI tasks (the main change is how screens or components look): always **full** mode. Delegate the visual change to Gamma (`ui-designer`) with a 4-part brief plus a design intent (`match`, `refresh` or `new`; default `match` for existing products). Paste its DESIGN INTENT, BEFORE / AFTER and NEEDS HUMAN DECISION into the PR, then run Epsilon (`security-reviewer`). In `clinical` projects a UI task counts as touching a `review` zone. If a UI task also needs API, state or logic changes, split it: a logic task first (with tests), then the UI task with `depends_on`.
+- UI tasks (the main change is how screens or components look): always **full** mode. Delegate the visual change to Gamma (`ui-designer`) with a 4-part brief plus a design intent (`match`, `refresh` or `new`; default `match` for existing products). Paste its DESIGN INTENT, BEFORE / AFTER and NEEDS HUMAN DECISION into the PR, then run Epsilon (`security-reviewer`). In `sensitive` projects a UI task counts as touching a `review` zone. If a UI task also needs API, state or logic changes, split it: a logic task first (with tests), then the UI task with `depends_on`.
 - Anything in `forbidden`: do not try workarounds through the shell. Describe the change and hand it to a human.
 - Before calling a dependency unused, search `src` **and** build config files (vite, tailwind, postcss, webpack, babel, tsconfig, package scripts).
 

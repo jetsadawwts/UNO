@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.4.0 — 2026-11-17
+- **Tiers work for any kind of project:** `open` · `internal` · `sensitive` replace `standard` · `clinical`. Hospital rules become one example of `sensitive`; project-specific display rules move to `.uno/project-profile.md`.
+- **Always-on guards in every tier:** secrets unreadable, installs ask first (`settings.internal.json`, `settings.sensitive.json` replace the old templates).
+- **Data check for this repo:** `.githooks/pre-commit` blocks commits carrying project names from the registry, extra terms from `.forbidden-terms`, foreign e-mails, 13-digit IDs or secret-like strings.
+- `THIRD_PARTY.md`: review checklist and list of external plugins/skills.
+- Scanner detects personal data beyond health (passport, tax ID, salary, card, bank account, employee ID).
+- After updating: change `tier: clinical` → `sensitive` and `standard` → `internal` (or `open`) in `registry/projects.yaml`; run `git config core.hooksPath .githooks`.
+
 ## v0.3.0 — 2026-11-15
 - **Personal mode is the default.** Onboarding no longer opens a setup PR. UNO files (`.uno/`, `CLAUDE.md`, `.claude/settings.local.json`) stay local through `.git/info/exclude`.
 - Settings templates hold only `permissions`; no marketplace entries in projects.

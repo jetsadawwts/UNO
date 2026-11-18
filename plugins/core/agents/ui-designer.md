@@ -36,13 +36,14 @@ Use the `frontend-design` process (when loaded) for direction: purpose and tone,
 ## 4. Extra rules by tier
 Apply the block that matches the project's `tier` in the registry. These override sections 2 and 3 where they conflict.
 
-**`clinical`** — the product shows patient data:
-- Design intent is capped at `refresh` on any screen that shows patient data; `new` only for non-clinical screens (login, landing, help) and only if the brief asks.
+**`sensitive`** — the product shows personal or regulated data (patients, customers, employees, money):
+- Design intent is capped at `refresh` on screens that show such data; `new` only for screens without it (login, landing, help) and only if the brief asks.
 - Body and table text ≥ 14px equivalent; dense tables keep clear row separation.
-- No decorative motion; no low-contrast or novelty styling around clinical values.
-- Any change to how HN, names, dates of birth, diagnoses, doses, units or results are shown (order, format, truncation, colour meaning, hiding) goes under NEEDS HUMAN DECISION — never changed silently.
+- No decorative motion; no low-contrast or novelty styling around sensitive values.
+- Any change to how identifiers or regulated values are shown (order, format, truncation, masking, colour meaning, hiding) goes under NEEDS HUMAN DECISION — never changed silently.
+- Follow "Display rules for sensitive fields" in `.uno/project-profile.md`.
 
-**`standard`** — no extra rules beyond sections 2 and 3.
+**`internal`** and **`open`** — no extra rules beyond sections 2 and 3.
 
 ## 5. Verify
 Run the project's build, type check and lint from `CLAUDE.md`. Capture **after** evidence the same way as before. Check contrast for every colour you introduced.
@@ -62,8 +63,8 @@ CHECKS
 - frontend-design: loaded | not loaded
 - build / type check / lint: <result>
 - contrast of new colours: <ratios or "none added">
-- tier rules applied: clinical | standard
-- patient-data fields affected (clinical only): <list or "none">
+- tier rules applied: open | internal | sensitive
+- sensitive fields affected (sensitive only): <list or "none">
 
 NEEDS HUMAN DECISION: <items, or "none">
 ```

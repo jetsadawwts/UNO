@@ -11,15 +11,16 @@ A new project is born onboarded: UNO rules, tests and CI exist from the first co
 
 Write `docs/intent.md` from `templates/intent.md`. Ask the user only what the template needs and cannot be inferred. Stop for approval.
 
-## Step 2 — Spec and risk tier (gate: CTO; plus Security if clinical)
+## Step 2 — Spec and risk tier (gate: CTO; plus Security if sensitive)
 
 Write `docs/spec.md`: scope, out of scope, users and roles, main flows, data handled, integrations, non-functional needs.
 
 Decide the tier with the user:
-- **clinical** if it stores, shows, sends or logs any patient data, or integrates with HIS/LIS/PACS/HL7/FHIR.
-- **standard** otherwise.
+- **sensitive** if it stores, shows, sends or logs personal or regulated data (health, identity, finance, HR, children), or integrates with systems that hold it (e.g. HIS, HL7/FHIR, payment, payroll).
+- **internal** if it is company or client code without such data.
+- **open** if it is the owner's own or open-source code with no company or personal data.
 
-When unsure, choose clinical. For clinical, the Security lens lists data flows and required controls (access control, audit logging, encryption, retention) in the spec before approval.
+When unsure, choose the higher tier. For sensitive, the Security lens lists data flows and required controls (access control, audit logging, encryption, retention) in the spec before approval.
 
 ## Step 3 — Architecture (gate: Tech Lead / CTO)
 
@@ -33,7 +34,7 @@ Only after Steps 1–3 are approved. Create, in this order:
 3. CI that runs lint + tests on every PR and blocks merge on failure.
 4. `CLAUDE.md` from `templates/CLAUDE.md`.
 5. `.uno/zones` from the onboard skill's `templates/zones`, plus project-specific forbidden paths. The owner reviews it.
-6. `.claude/settings.local.json` with the `permissions` block of `templates/settings.standard.json` or `templates/settings.clinical.json`. UNO files (`.uno/`, `CLAUDE.md`, `.claude/settings.local.json`) go to `.git/info/exclude` when the repo is shared; commit them only if the owner says the repo is personal.
+6. `.claude/settings.local.json` with the `permissions` block of `templates/settings.internal.json` (open and internal) or `templates/settings.sensitive.json`. UNO files (`.uno/`, `CLAUDE.md`, `.claude/settings.local.json`) go to `.git/info/exclude` when the repo is shared; commit them only if the owner says the repo is personal.
 7. `.uno/onboarding.md` with all phases marked "n/a — born on UNO" except baseline.
 
 Open the scaffold (code, tests, CI, zones-free) as one PR: `chore: scaffold <name>`. A human merges it. UNO's own files are not part of it.
@@ -44,10 +45,10 @@ Add the project to `registry/projects.yaml` in the UNO repo: tier, owner, `auton
 
 ## Step 6 — Build
 
-Normal UNO loop: `plan.md` per feature → small PRs → review. A new project may be promoted to L2 after its first feature ships with tests and no escalations. Clinical tier never goes above L2.
+Normal UNO loop: `plan.md` per feature → small PRs → review. A new project may be promoted to L2 after its first feature ships with tests and no escalations. Sensitive tier never goes above L2.
 
 ## Rules
 
 - No feature code before CI and the smoke test pass.
-- No real patient data in fixtures, seeds or tests; generate synthetic data.
+- No real personal data in fixtures, seeds or tests; generate synthetic data.
 - Every dependency added is named in the PR description with why.
