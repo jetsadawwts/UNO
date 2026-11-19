@@ -5,6 +5,8 @@ Blocks (exit 2):
   - `git commit` while the current branch is the default branch
   - `git push` that targets the default branch, or any force push without --force-with-lease
   - `git merge` into the default branch
+  - `git checkout` / `git switch` to a ref whose tree still tracks `.uno/` or `CLAUDE.md`
+    while those are local symlinks (personal mode): git would replace the symlinks with old files
 Only active when `.uno/zones` exists (project onboarded). Never blocks on its own errors.
 """
 import json
@@ -60,6 +62,33 @@ def git_args(tok):
     return args
 
 
+PERSONAL_PATHS = (".uno", "CLAUDE.md")
+
+
+def checkout_target(sub, rest):
+    """Ref whose tree a checkout/switch would write into the working tree, or None."""
+    if "--" in rest:
+        return None  # file restore, not a branch switch
+    create = ("-b", "-B") if sub == "checkout" else ("-c", "-C", "--create", "--force-create")
+    args, i = [], 0
+    while i < len(rest):
+        a = rest[i]
+        if a in create:
+            i += 2  # skip the new branch name; a start point may follow
+            continue
+        if not a.startswith("-"):
+            args.append(a)
+        i += 1
+    return args[0] if args else None
+
+
+def tracks_personal_files(root, ref):
+    if not any(os.path.islink(os.path.join(root, p)) for p in PERSONAL_PATHS):
+        return False
+    listed = git(root, "ls-tree", "-r", "--name-only", ref, "--", *PERSONAL_PATHS)
+    return bool(listed)
+
+
 def check(root, command):
     base = default_branch(root)
     current = git(root, "rev-parse", "--abbrev-ref", "HEAD")
@@ -68,6 +97,12 @@ def check(root, command):
         if not args:
             continue
         sub, rest = args[0], args[1:]
+        if sub in ("checkout", "switch"):
+            ref = checkout_target(sub, rest)
+            if ref and tracks_personal_files(root, ref):
+                return (f"UNO: '{ref}' still tracks .uno/ or CLAUDE.md from before personal mode. "
+                        f"Checking it out would replace your local symlinks with old files. "
+                        f"Instead: git switch -c <new-branch> origin/{base} && git cherry-pick <commits of {ref}>.")
         if sub == "commit" and current == base:
             return (f"UNO: you are on the default branch '{base}'. Create a task branch from "
                     f"origin/{base} first (see /core:work), then commit there.")

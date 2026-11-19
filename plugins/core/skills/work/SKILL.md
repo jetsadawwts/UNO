@@ -27,9 +27,10 @@ Write the chosen mode and the reason into the task row. When unsure, use **full*
 
 1. Find the default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` (strip `origin/`); fall back to `main`, then `master`.
 2. `git fetch origin` then create `<type>/<task-id>-<slug>` **from `origin/<default>`**, e.g. `test/T1-utils-characterization`. Types: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`.
-3. Never build a task branch on top of another task branch. If the task truly depends on unmerged work, set `depends_on` in the task row, branch from that branch, and say so in the PR description so it is merged in order.
-4. Never commit on the default branch. The `guard_git` hook blocks it.
-5. In **full** mode use a git worktree (`superpowers:using-git-worktrees` if available) so parallel tasks do not share a working tree.
+3. Never check out a branch created before the project moved to personal mode (its tree still tracks `.uno/` or `CLAUDE.md`; `guard_git` blocks it). To reuse its work: `git switch -c <type>/<task-id>-<slug> origin/<default>` then `git cherry-pick <its commits>`.
+4. Never build a task branch on top of another task branch. If the task truly depends on unmerged work, set `depends_on` in the task row, branch from that branch, and say so in the PR description so it is merged in order.
+5. Never commit on the default branch. The `guard_git` hook blocks it.
+6. In **full** mode use a git worktree (`superpowers:using-git-worktrees` if available) so parallel tasks do not share a working tree.
 
 ## 3. Do the work
 

@@ -20,6 +20,8 @@ Agents may search for skills; only the owner installs them.
 
 ## Planned / under evaluation
 
+- **Ponytail** (`DietrichGebert/ponytail`, MIT) — minimal-change skill with always-on hooks and `/ponytail-review`. Status: benchmark arm D (UNO + Ponytail lite) before adoption. Checks before install: hook order with UNO and Superpowers; it must not remove validation, logging or masking in `sensitive` projects; do not use `band import` until it is clear where session data is stored. Install at user scope only after the benchmark; pin the version here.
+
 | Name | Source | Purpose | Status |
 |---|---|---|---|
 | frontend-design | anthropics/claude-plugins-official | Gamma design direction | install when a UI task arrives |

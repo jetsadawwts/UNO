@@ -27,6 +27,9 @@
       "Bash(dotnet add:*)",
       "Bash(npx skills:*)",
       "Bash(npm install -g:*)"
+    ],
+    "additionalDirectories": [
+      "<uno-data-dir>"
     ]
   }
 }

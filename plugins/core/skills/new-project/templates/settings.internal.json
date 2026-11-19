@@ -23,6 +23,9 @@
       "Bash(npm install -g:*)",
       "Bash(curl:*)",
       "Bash(wget:*)"
+    ],
+    "additionalDirectories": [
+      "<uno-data-dir>"
     ]
   }
 }
