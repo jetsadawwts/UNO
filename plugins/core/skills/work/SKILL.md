@@ -85,6 +85,11 @@ No code edit before the owner approves a plan. The `guard_plan` hook enforces it
 
 **If Superpowers is not installed**, use the built-in loop: Plan → Act → Verify → Reflect.
 
+**Team members inside `/core:work`:**
+- Before writing the plan, ask Beta (`codebase-explorer`) concrete questions instead of reading whole folders yourself; put its file:line evidence in the plan's "Files to change".
+- When a planned step needs tests, call Delta (`test-writer`) with that step: characterization tests first (commit them separately), then failing tests for the new behaviour; you change the code.
+- UI: Gamma (`ui-designer`) `design` mode for the plan, `build` mode after approval. Security: Epsilon (`security-reviewer`) before every PR.
+
 **UNO rules that override any skill:**
 - Legacy code without tests: write characterization tests that pin current behaviour **before** changing it. Commit them separately.
 - No feature work and bug fixes in the same branch. No refactor mixed with behaviour change.

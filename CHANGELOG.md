@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.0 — 2026-11-23
+- **Full team of 8.** New agents: Alpha (`intake-triager`), Beta (`codebase-explorer`, read only), Delta (`test-writer`, test files only), Zeta (`release-manager`, `.uno/releases/` only, never tags or deploys), Eta (`incident-scribe`, `.uno/` only, never touches servers).
+- **New skills close the SDLC loop:** `/core:intake` (request → spec in `.uno/specs/` → proposed tasks), `/core:release` (merged PRs → `.uno/releases/<version>.md` with deploy and rollback; owner tags and deploys), `/core:incident` (report → `.uno/incidents/` → proposed fix and regression test).
+- `/core:work` calls Beta before planning and Delta for planned tests. Team roster in `references/team.md` shows what each member may edit.
+- Not yet used on a real task: Alpha, Beta, Delta, Zeta, Eta.
+- After updating: nothing to migrate.
+
 ## v0.4.3 — 2026-11-23
 - **Plan gate on every task.** New hook `guard_plan`: no edit outside `.uno/` until `.uno/plans/<task-id>.md` is approved by the owner and unchanged since. The branch must carry the task id (`fix/T7-slug`).
 - **Owner-only approval:** `scripts/approve_plan.py <task-id>` appends `Approved-by: <name> <time> sha256:<hash>`; run it with `!` inside Claude Code or in a terminal. Agents cannot write that line; changing the plan voids it.

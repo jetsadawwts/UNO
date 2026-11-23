@@ -2,16 +2,19 @@
 
 AI team members are named in lifecycle order. People hold **roles** (`owner`, `tech-lead`, `qa`, `domain-user`, `security`, `ops`, `change-approver`); AI members only help those roles and never approve.
 
-| Name | Code | Job | Helps role | Status |
-|---|---|---|---|---|
-| Uno | `uno` | lead: assigns work, enforces rules | all | live (skills `work`, `onboard`) |
-| Alpha | `intake-triager` | turns requests and bug reports into `proposed` tasks | owner | planned, phase D (`/core:intake`) |
-| Beta | `codebase-explorer` | read-only search: what calls what, file:line answers | tech-lead | planned |
-| Gamma | `ui-designer` | UI design for any project (frontend-design + tier rules) | tech-lead | live (`agents/ui-designer.md`) |
-| Delta | `test-writer` | characterization and unit tests | qa | planned |
-| Epsilon | `security-reviewer` | personal/sensitive data, secrets, auth review of a diff | security | live (`agents/security-reviewer.md`) |
-| Zeta | `release-manager` | version tag, changelog, deploy runbook | ops, tech-lead | planned, phase B (`/core:release`) |
-| Eta | `incident-scribe` | incident timeline and postmortem | ops | planned, phase C (`/core:incident`) |
+| Name | Code | Job | Helps role | Edits | Status |
+|---|---|---|---|---|---|
+| Uno | `uno` | lead: plans, enforces rules, implements, opens PRs | all | code, inside an approved plan | live (`work`, `onboard`, `new-project`, `refactor`, `portfolio-scan`) |
+| Alpha | `intake-triager` | request or bug → spec + proposed tasks | owner | `.uno/` only | live (`/core:intake`) |
+| Beta | `codebase-explorer` | read-only search, file:line answers | tech-lead | nothing | live (called by skills) |
+| Gamma | `ui-designer` | UI design (`design` mode, in the plan) and build (`build` mode) | tech-lead | design: nothing · build: UI inside the plan | live |
+| Delta | `test-writer` | characterization tests, failing tests for new behaviour | qa | test files only | live (called by `work`) |
+| Epsilon | `security-reviewer` | personal/sensitive data, secrets, auth, deps review of a diff | security | nothing | live (before every PR) |
+| Zeta | `release-manager` | release notes, deploy steps, rollback plan | ops, tech-lead | `.uno/releases/` only | live (`/core:release`) |
+| Eta | `incident-scribe` | incident record, likely causes, fix + test tasks | ops | `.uno/` only | live (`/core:incident`) |
+
+Reserved names for new members: Theta, Iota, Kappa, Lambda.
+Subagents cannot start other subagents: a skill (run by Uno) calls Beta first and passes its answer on.
 
 Rules
 - In PRs, logs and `tasks.md`, write name **and** code: `Epsilon (security-reviewer)`, so a later reader knows it was an AI.
