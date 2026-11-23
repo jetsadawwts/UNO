@@ -2,6 +2,16 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.4.3 — 2026-11-23
+- **Plan gate on every task.** New hook `guard_plan`: no edit outside `.uno/` until `.uno/plans/<task-id>.md` is approved by the owner and unchanged since. The branch must carry the task id (`fix/T7-slug`).
+- **Owner-only approval:** `scripts/approve_plan.py <task-id>` appends `Approved-by: <name> <time> sha256:<hash>`; run it with `!` inside Claude Code or in a terminal. Agents cannot write that line; changing the plan voids it.
+- **UI is designed in the plan:** Gamma runs in `design` mode (read only) while the plan is written; its DESIGN PROPOSAL goes into the plan's "UI design" section, so the owner approves design and code together. After approval Gamma runs in `build` mode and stays inside that design.
+- **The approved plan is the go-ahead.** `/core:work` runs end to end and stops only for decisions the plan did not make: plan approval, outside the plan, escalation. Anything that affects the plan (files, steps, packages, design, approach, acceptance, risk, rollback) is brought to the owner as a joint decision with options and a recommendation, then written into the plan and re-approved. Only details that leave the plan unchanged (names, test layout, fixing errors the change caused) are decided alone. Package installs still ask every time.
+- **Fewer permission prompts:** settings templates `allow` read-only and task-branch commands (git status/diff/log/switch/cherry-pick/add/commit/push, gh pr, npm lint/test/build, tsc, vitest). `guard_git` and `guard_plan` still block the unsafe ones.
+- Plan template `work/templates/plan.md` with rollback point, one commit per step and a rollback section.
+- Known limit: edits made through Bash (redirection, `sed -i`) bypass the gate; `/core:work` forbids them and the audit log shows Bash commands.
+- After updating: add the `allow` list from `settings.<tier>.json` to each onboarded project's `.claude/settings.local.json`. Tasks already in progress need a plan approved before the next edit.
+
 ## v0.4.2 — 2026-11-19
 - **`guard_git` blocks checkout/switch to old branches** whose tree still tracks `.uno/` or `CLAUDE.md` while those are symlinks; the message tells the agent to cherry-pick onto a fresh branch. `/core:work` states the same rule.
 - **No permission prompt for `.uno`:** settings templates add `additionalDirectories: ["<uno-data-dir>"]`; onboarding fills in the absolute `~/UNO/data/<project>` path.
