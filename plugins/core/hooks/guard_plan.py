@@ -98,10 +98,27 @@ def main():
         event = json.load(sys.stdin)
     except json.JSONDecodeError:
         return 0
-    if event.get("tool_name") not in EDIT_TOOLS:
+    tool = event.get("tool_name")
+    if tool not in EDIT_TOOLS and tool != "Bash":
         return 0
     root = os.environ.get("CLAUDE_PROJECT_DIR") or event.get("cwd") or os.getcwd()
     if not os.path.exists(os.path.join(root, ".uno", "zones")):
+        return 0
+    if tool == "Bash":
+        cmd = (event.get("tool_input") or {}).get("command", "")
+        if "approve_plan" in cmd or "Approved-by" in cmd:
+            print("UNO: only the owner approves a plan. Show the plan, stop, and ask the owner to run "
+                  "`! python3 ~/UNO/uno/scripts/approve_plan.py <task-id>` themselves. Do not run it.",
+                  file=sys.stderr)
+            try:
+                with open(os.path.join(root, ".uno", "audit.log"), "a", encoding="utf-8") as fh:
+                    fh.write(json.dumps({"time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                                         "session": event.get("session_id"), "tool": "Bash",
+                                         "command": cmd[:200], "action": "blocked",
+                                         "rule": "self-approval"}, ensure_ascii=False) + "\n")
+            except OSError:
+                pass
+            return 2
         return 0
     try:
         reason = check(root, event.get("tool_input") or {})

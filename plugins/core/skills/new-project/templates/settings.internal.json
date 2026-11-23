@@ -11,7 +11,9 @@
       "Read(./**/*credentials*)",
       "Bash(git push origin <default-branch>:*)",
       "Bash(git push --force:*)",
-      "Bash(rm -rf:*)"
+      "Bash(rm -rf:*)",
+      "Edit(//<home>/UNO/uno/**)",
+      "Write(//<home>/UNO/uno/**)"
     ],
     "ask": [
       "Bash(npm install:*)",
@@ -57,7 +59,8 @@
       "Bash(ls:*)",
       "Bash(cat:*)",
       "Bash(grep:*)",
-      "Bash(wc:*)"
+      "Bash(wc:*)",
+      "Read(//<home>/UNO/uno/**)"
     ]
   }
 }

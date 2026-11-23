@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.1 — 2026-11-23
+Fixes from the first real run (T7):
+- **Approve by typing `approve T7`** (or `อนุมัติ T7`) in chat. New `UserPromptSubmit` hook `approve_on_prompt` reacts only to human prompts, so an agent cannot approve. The agent tried to run `approve_plan.py` itself; `guard_plan` now blocks any Bash call that mentions `approve_plan` or `Approved-by`.
+- **A plan cannot be approved with missing sections** (Goal, UI design, Dependencies, Files to change, Steps, Verification, Rollback) — checked by both the prompt hook and `approve_plan.py`.
+- **Plans use facts from the repo now**: base sha from `origin/<default>` after fetch, tier and review from the profile, counts measured on that base (the T7 plan reused a stale base, branch and tier).
+- Skill names its template path and lists the sections as a fallback; prefers allowed commands over `node -e` / `python -c`.
+- Project sessions may read `~/UNO/uno` but not edit or write it (settings templates use `<home>`).
+- After updating: in each onboarded project's `.claude/settings.local.json` add `Read(//<home>/UNO/uno/**)` to allow and `Edit(…)`, `Write(…)` of the same path to deny; remove any deny rule naming `approve_plan`.
+
 ## v0.5.0 — 2026-11-23
 - **Full team of 8.** New agents: Alpha (`intake-triager`), Beta (`codebase-explorer`, read only), Delta (`test-writer`, test files only), Zeta (`release-manager`, `.uno/releases/` only, never tags or deploys), Eta (`incident-scribe`, `.uno/` only, never touches servers).
 - **New skills close the SDLC loop:** `/core:intake` (request → spec in `.uno/specs/` → proposed tasks), `/core:release` (merged PRs → `.uno/releases/<version>.md` with deploy and rollback; owner tags and deploys), `/core:incident` (report → `.uno/incidents/` → proposed fix and regression test).

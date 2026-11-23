@@ -77,7 +77,7 @@ portfolio-scan  →  registry (human)  →  onboard, per project, wave by wave
 /core:portfolio-scan ~/work/projects
 /core:onboard            # run inside one project
 /core:work T3            # run one task from .uno/tasks.md
-! python3 ~/UNO/uno/scripts/approve_plan.py T3   # approve the plan UNO shows before it edits code
+approve T3                                         # type in chat to approve the plan UNO shows (owner only)
 /core:intake "users want IPD report as PDF"       # request → spec → proposed tasks
 /core:release                                      # release notes + rollback; you tag and deploy
 /core:incident "Thai text broken in PDF at site A" # incident record → fix + test tasks

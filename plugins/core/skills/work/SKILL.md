@@ -11,7 +11,7 @@ UNO decides **what** may be done and **how safe** it must be. The Superpowers sk
 
 Once started with a task id, carry the task through every step below in one go: branch, plan, implement, verify, review, PR, task row. Do not ask "shall I continue?", do not wait between steps, and do not hand the user commands to type that you can run yourself. The approved plan is the owner's go-ahead for everything in it. After approval, ask nothing about work the plan covers. Stop **only** for a decision the plan did not make:
 
-1. **Plan approval** — the plan is written; ask the owner to run `! python3 ~/UNO/uno/scripts/approve_plan.py <task-id>`, then continue on your own once they say it is done. List every package to install, upgrade or remove under "Dependencies".
+1. **Plan approval** — the plan is written; ask the owner to run `approve <task-id>` as a chat message (e.g. `approve T7`), then continue on your own once they say it is done. List every package to install, upgrade or remove under "Dependencies".
 2. **Anything that affects the plan** — a file, step, package, design, approach, acceptance check, risk or rollback different from what was approved, even if small or clearly better. Do not decide alone: bring it to the owner as a joint decision (format below), update the plan with the agreed option, and go back to 1.
 3. **Escalation** — 3 failed attempts at the same check, Epsilon BLOCK, or a NEEDS HUMAN DECISION item.
 4. **Package installs** — each install still shows Claude Code's own permission prompt (`ask`); that is expected, not a reason to pause anything else.
@@ -64,10 +64,12 @@ Write the chosen mode and the reason into the task row. When unsure, use **full*
 
 No code edit before the owner approves a plan. The `guard_plan` hook enforces it: edits outside `.uno/` are blocked unless the branch carries the task id and `.uno/plans/<task-id>.md` is approved and unchanged since.
 
-1. Write `.uno/plans/<task-id>.md` from `templates/plan.md`: rollback point (base commit), files and zones, steps (one commit each), verification, rollback, risks. In full mode this is the output of `superpowers:writing-plans`, saved there. Small mode may keep each section to one line, but no section is skipped.
-2. Show the plan in chat and **stop**. Ask the owner to approve with `! python3 ~/UNO/uno/scripts/approve_plan.py <task-id>`. Never write the `Approved-by:` line yourself; the hook blocks it.
+1. Write `.uno/plans/<task-id>.md` from `templates/plan.md` in this skill's base directory (if it is missing, use these sections: Goal and acceptance check, UI design, Dependencies, Files to change, Steps, Verification, Rollback, Decisions during the work, Risks and out of scope). Take facts from the repo now, not from old task rows: base = `git rev-parse --short origin/<default>` after `git fetch`, tier and review from `.uno/project-profile.md`, test and lint counts measured on that base. Content: rollback point (base commit), files and zones, steps (one commit each), verification, rollback, risks. In full mode this is the output of `superpowers:writing-plans`, saved there. Small mode may keep each section to one line, but no section is skipped.
+2. Show the plan in chat and **stop**. Ask the owner to approve with `approve <task-id>` as a chat message (e.g. `approve T7`). Never write the `Approved-by:` line and never run `approve_plan.py` yourself; hooks block both. Only the owner's own chat message approves (the `approve_on_prompt` hook reacts to human prompts only).
 3. If the work needs anything the plan does not cover (another file, another step, a dependency), stop, update the plan, and ask again. Editing the plan voids the approval automatically.
 4. Make every change with the Edit/Write tools, never with shell redirection or `sed -i`, so the gate and the audit log see it.
+5. Prefer commands the project already allows (`cat`, `grep`, `git …`, `npm run …`, `npx tsc`) over `node -e`, `python -c` or other inline scripts, which need a permission prompt and can do anything.
+6. Never edit files under `~/UNO/uno` from a project session; UNO changes are made in the UNO repo and released as a version.
 
 ## 3. Do the work
 

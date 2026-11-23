@@ -1,5 +1,5 @@
 {
   "name": "core",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "UNO core: org rules (registry, onboarding, zones, autonomy) on top of Superpowers task skills"
 }

@@ -26,6 +26,11 @@ def main():
         return 1
     text = open(path, encoding="utf-8").read()
     body = "\n".join(l for l in text.splitlines() if not l.startswith(APPROVAL)).strip()
+    required = ["Goal", "UI design", "Dependencies", "Files to change", "Steps", "Verification", "Rollback"]
+    missing = [h for h in required if f"## {h}".lower() not in body.lower()]
+    if missing:
+        print(f"not approved: plan is missing sections: {', '.join(missing)}", file=sys.stderr)
+        return 1
     print(body)
     print("\n" + "-" * 60)
     if sys.stdin.isatty() and input(f"Approve this plan for {task}? [y/N] ").strip().lower() != "y":
