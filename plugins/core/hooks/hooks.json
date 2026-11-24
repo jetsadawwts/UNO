@@ -35,6 +35,15 @@
             "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/trace_agents.py"
           }
         ]
+      },
+      {
+        "matcher": ".*[Bb]rowser.*|.*chrome.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/guard_browser.py"
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

@@ -12,8 +12,9 @@ AI team members are named in lifecycle order. People hold **roles** (`owner`, `t
 | Epsilon | `security-reviewer` | personal/sensitive data, secrets, auth, deps review of a diff | security | nothing | live (before every PR) |
 | Zeta | `release-manager` | release notes, deploy steps, rollback plan | ops, tech-lead | `.uno/releases/` only | live (`/core:release`) |
 | Eta | `incident-scribe` | incident record, likely causes, fix + test tasks | ops | `.uno/` only | live (`/core:incident`) |
+| Theta | `doc-writer` | README, user guides, deploy/operations and developer docs, checked against the code | owner, ops | documentation files only | live (called by `work`, suggested by `release`) |
 
-Reserved names for new members: Theta, Iota, Kappa, Lambda.
+Reserved names for new members: Iota, Kappa, Lambda.
 Subagents cannot start other subagents: a skill (run by Uno) calls Beta first and passes its answer on.
 
 Rules

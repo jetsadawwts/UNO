@@ -132,6 +132,22 @@ def main():
         fh.write("extra line\n")
     check("plan: edit after plan changed", hook("guard_plan.py", edit("src/a.ts"), repo)[0], 2)
 
+    # --- browser hosts ---
+    def browse(url, tool="mcp__Claude_Browser__navigate"):
+        return hook("guard_browser.py", {"tool_name": tool, "tool_input": {"url": url}}, repo)[0]
+    profile = os.path.join(data, "project-profile.md")
+    check("browser: no preview section -> blocked", browse("http://localhost:5173/log"), 2)
+    open(profile, "w").write("# P\n## Preview\n- URL: http://localhost:5173\n- Allowed hosts: uat.example.org\n- Data: none\n")
+    check("browser: Data none -> blocked", browse("http://localhost:5173/log"), 2)
+    open(profile, "w").write("# P\n## Preview\n- URL: http://localhost:5173\n- Allowed hosts: uat.example.org, 10.0.0.5:8080\n- Data: fake\n## Other\n")
+    check("browser: localhost ok", browse("http://localhost:5173/log"), 0)
+    check("browser: allowed UAT host ok", browse("https://uat.example.org/his"), 0)
+    check("browser: allowed host:port ok", browse("http://10.0.0.5:8080/x"), 0)
+    check("browser: production host blocked", browse("https://his.example.org/"), 2)
+    check("browser: chrome tool, other host blocked", browse("https://mail.example.com", "mcp__claude-in-chrome__navigate"), 2)
+    check("browser: no url (screenshot) ok", hook("guard_browser.py", {"tool_name": "mcp__Claude_Browser__computer", "tool_input": {"action": "screenshot"}}, repo)[0], 0)
+    check("browser: non-browser tool ignored", hook("guard_browser.py", bash("curl https://his.example.org"), repo)[0], 0)
+
     # --- no task branch ---
     sh("git", "switch", "-qc", "chore/no-task", "origin/master", cwd=repo)
     check("plan: edit on branch without task id", hook("guard_plan.py", edit("src/a.ts"), repo)[0], 2)

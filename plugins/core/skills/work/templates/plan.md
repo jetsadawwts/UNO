@@ -24,6 +24,7 @@ Installs are checked against this list by `guard_plan` (no separate prompt); a p
 
 ## Verification
 <commands: lint, tsc, tests, build, plus the acceptance check>
+<on screen: none | smoke | smoke + steps | smoke + steps + screenshots | smoke + steps + open the file — and the steps>
 
 ## Rollback
 - Before merge: delete the branch, or `git revert <step commit>`.

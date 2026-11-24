@@ -66,6 +66,18 @@
 ## 10. Open questions for the owner
 - [ ]
 
+## Preview
+<!-- How UNO may run and look at the app. Leave "Data: none" until the owner confirms the data is fake.
+     The guard_browser hook reads these lines: the browser may open only localhost and "Allowed hosts",
+     and only when Data is "fake". -->
+- Run: <e.g. npm run dev:uat — local app against the UAT API>
+- URL: <e.g. http://localhost:5173/log>
+- Main pages: <paths the smoke check opens, e.g. /log/opd, /log/ipd>
+- Allowed hosts: <UAT host(s) the local app or tests may open, comma separated; never production>
+- Data: none   <!-- none | fake. "fake" only after the owner confirms every record is test data -->
+- Confirmed by: <owner, date>
+- Login: the owner signs in by hand in the built-in browser; never type or store passwords
+
 ## Display rules for sensitive fields
 <!-- Project-specific rules Gamma and Epsilon must follow, e.g. "HN always shown in full, never truncated";
      "amounts always with currency and 2 decimals"; "employee ID masked except last 4". Leave empty if none. -->

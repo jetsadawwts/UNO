@@ -2,6 +2,20 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.6 — 2026-11-24
+- **UNO can look at the running app — only on fake data.** New profile section `## Preview` (run command, URL, allowed hosts, `Data: none | fake`, who confirmed). `/core:work` step 3b drives the built-in browser for UI checks, BEFORE/AFTER screenshots (`.uno/designs/<task>/`) and user-guide images; without `Data: fake` it skips and says so.
+- **`guard_browser` hook:** any browser tool (built-in browser, Claude in Chrome, Playwright MCP) may open only localhost and the profile's allowed hosts, and only when `Data: fake`. Protects against a remembered login being used on production when test and real accounts are the same.
+- **On-screen check by kind of change:** any change to app code gets at least a smoke check (app starts, main pages load, no console errors); logic, UI and export changes also run the acceptance steps on screen (UI adds screenshots, export opens the file). No fake-data preview → skipped, said in the PR, and `review: careful` (condition 10). Profile gets `- Main pages:`; the plan's Verification names the level.
+- The owner signs in by hand; UNO never types or stores passwords.
+- Hook tests: 65 cases.
+- After updating: add a `## Preview` section to each project's profile; keep `Data: none` until you confirm the data is fake.
+
+## v0.5.5 — 2026-11-24
+- **Theta (`doc-writer`) joins the team.** Writes and updates README, user guides, deploy/operations guides and developer docs inside an approved plan; edits documentation files only; every command, path and setting it documents must be confirmed in the repo (anything unconfirmed is left out and reported); fake data only in examples.
+- `/core:work`: documentation tasks go to Theta; a code task that changes what users or operators do ends with a plan step for Theta to update the affected docs.
+- `/core:release`: proposes a `docs` task for Theta when a release changes user- or operator-facing behaviour and the docs were not updated.
+- After updating: nothing to migrate.
+
 ## v0.5.4 — 2026-11-24
 - **Smoke test proves the hooks load, without calling any model.** It sends `uno-smoke <nonce>`; the `approve_on_prompt` hook logs the nonce and blocks the prompt before it reaches the model. The old check passed whenever the model's answer mentioned "T99", and with a local model it waited on a slow model call.
 - Local check: Ollama reachable, model present, `/v1/messages` answers (180 s limit), then the same hook proof. Each Claude Code call is limited to 60 s (portable `perl alarm`, macOS has no `timeout`).

@@ -91,6 +91,7 @@ No code edit before the owner approves a plan. The `guard_plan` hook enforces it
 - Before writing the plan, ask Beta (`codebase-explorer`) concrete questions instead of reading whole folders yourself; put its file:line evidence in the plan's "Files to change".
 - When a planned step needs tests, call Delta (`test-writer`) with that step: characterization tests first (commit them separately), then failing tests for the new behaviour; you change the code.
 - UI: Gamma (`ui-designer`) `design` mode for the plan, `build` mode after approval. Security: Epsilon (`security-reviewer`) before every PR.
+- Documentation (README, user guide, deploy guide, developer docs): Theta (`doc-writer`) writes it inside the plan. A code task that changes what users or operators do adds a final plan step for Theta to update the affected docs; list those files in the plan.
 
 **UNO rules that override any skill:**
 - Legacy code without tests: write characterization tests that pin current behaviour **before** changing it. Commit them separately.
@@ -101,6 +102,26 @@ No code edit before the owner approves a plan. The `guard_plan` hook enforces it
 - Split a task only when it is too big to review in one sitting: more than ~300 changed lines, or more than one screen or user flow. Each part becomes its own task with `depends_on`. Logic changes in a split still come first, with tests.
 - Anything in `forbidden`: do not try workarounds through the shell. Describe the change and hand it to a human.
 - Before calling a dependency unused, search `src` **and** build config files (vite, tailwind, postcss, webpack, babel, tsconfig, package scripts).
+
+## 3b. Look at the running app (UI tasks, user guides, E2E checks)
+
+How far to look depends on the change (write the level into the plan's Verification):
+
+| Change | On screen |
+|---|---|
+| touches app code (`src/` or equivalent) but no behaviour: types, lint, renames | **smoke**: the app starts, each main page in the profile's `URL` list loads, no errors in the browser console |
+| logic: filters, calculations, conditions, data handling | smoke + every step of the acceptance check done on screen |
+| UI: screens, components, layout | smoke + the steps + BEFORE / AFTER screenshots |
+| export, print, PDF, download | smoke + the steps + open the produced file and look at it |
+| docs only, tests only | none (unless the docs need screenshots) |
+
+Only when `.uno/project-profile.md` has a `## Preview` section with `- Data: fake`. Otherwise skip, write "screens not checked: no fake-data preview" in the PR, and label it `review: careful` (condition 10).
+
+1. Use the built-in browser (Claude desktop app). Claude in Chrome only if the owner asks: it carries all of the owner's own logins.
+2. Start the app with the profile's `Run` command if it is not running; open its `URL`. The `guard_browser` hook blocks any host other than localhost and the profile's `Allowed hosts`.
+3. If a login page appears, stop and ask the owner to sign in by hand in that browser. Never type, read back, or store a password.
+4. Do what the plan's Verification lists on screen. Save screenshots to `.uno/designs/<task-id>/` (`before-*.png`, `after-*.png`), never into the repo, unless the plan says they belong in the user docs (then Theta places them under `docs/`).
+5. Hand Gamma and Theta the screenshot paths; they cannot drive the browser themselves.
 
 ## 4. Verify — evidence, not opinion
 
@@ -129,7 +150,8 @@ Read `Review` from `.uno/project-profile.md`:
   7. Epsilon (security-reviewer) gave anything but a plain PASS
   8. the PR lists a NEEDS HUMAN DECISION item
   9. the plan's `Approved-by:` line shows a `backend:` other than `anthropic` (work done with a local or third-party model)
-  For `review: careful`, list which of the 9 apply so the owner knows what to read. `review: quick` still needs Epsilon PASS and green checks.
+  10. the change touches app code and the on-screen check (3b) was skipped or failed
+  For `review: careful`, list which of the 10 apply so the owner knows what to read. `review: quick` still needs Epsilon PASS and green checks.
 - `second-reviewer`: the repo requires another approver. Say so in the PR, add the label as above, and never suggest the owner merge alone.
 
 Never merge, never push to the default branch, never close someone else's PR.
