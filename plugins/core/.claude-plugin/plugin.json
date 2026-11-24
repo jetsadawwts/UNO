@@ -1,5 +1,5 @@
 {
   "name": "core",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "UNO core: an AI engineering team for your projects — plan gate with owner approval, risk-based review, git/zone/plan guards, and an 8-member team (Uno, Alpha, Beta, Gamma, Delta, Epsilon, Zeta, Eta) covering intake, work, release and incident."
 }

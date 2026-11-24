@@ -94,6 +94,9 @@ def main():
     check("prompt: incomplete plan refused", "NOT approved" in out, True)
     out = hook("approve_on_prompt.py", {"prompt": "approve T99"}, repo)[1]
     check("prompt: missing plan", "no plan" in out, True)
+    out = hook("approve_on_prompt.py", {"prompt": "uno-smoke smoke-123-9"}, repo)[1]
+    check("smoke prompt blocked before the model", '"decision": "block"' in out and "smoke-123-9" in out, True)
+    check("smoke prompt logged", '"nonce": "smoke-123-9"' in open(os.path.join(data, "audit.log")).read(), True)
     out = hook("approve_on_prompt.py", {"prompt": "please approve T7 and go"}, repo)[1]
     check("prompt: other text ignored", out.strip(), "")
 

@@ -2,6 +2,11 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.4 — 2026-11-24
+- **Smoke test proves the hooks load, without calling any model.** It sends `uno-smoke <nonce>`; the `approve_on_prompt` hook logs the nonce and blocks the prompt before it reaches the model. The old check passed whenever the model's answer mentioned "T99", and with a local model it waited on a slow model call.
+- Local check: Ollama reachable, model present, `/v1/messages` answers (180 s limit), then the same hook proof. Each Claude Code call is limited to 60 s (portable `perl alarm`, macOS has no `timeout`).
+- After updating: nothing to migrate.
+
 ## v0.5.3 — 2026-11-24
 - Plugin and marketplace descriptions match what UNO does now (shown in `/plugin`).
 - Recommended install source is the GitHub repo (`/plugin marketplace add https://<user>@github.com/<user>/UNO.git`), so only pushed releases reach project sessions.

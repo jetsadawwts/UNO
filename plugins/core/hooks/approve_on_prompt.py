@@ -16,6 +16,7 @@ import sys
 from datetime import datetime, timezone
 
 APPROVAL = "Approved-by:"
+SMOKE = re.compile(r"^\s*uno-smoke\s+([A-Za-z0-9-]{4,40})\s*$")
 PATTERN = re.compile(r"^\s*(?:approve|อนุมัติ)\s+(T\d+)\s*$", re.IGNORECASE)
 REQUIRED = ["## Goal", "## UI design", "## Dependencies", "## Files to change", "## Steps",
             "## Verification", "## Rollback"]
@@ -42,11 +43,24 @@ def main():
         event = json.load(sys.stdin)
     except json.JSONDecodeError:
         return 0
-    m = PATTERN.match(event.get("prompt", ""))
-    if not m:
-        return 0
+    prompt = event.get("prompt", "")
     root = os.environ.get("CLAUDE_PROJECT_DIR") or event.get("cwd") or os.getcwd()
     if not os.path.exists(os.path.join(root, ".uno", "zones")):
+        return 0
+    s = SMOKE.match(prompt)
+    if s:  # smoke test: prove this session runs UNO hooks; the prompt never reaches the model
+        be, model = backend()
+        try:
+            with open(os.path.join(root, ".uno", "audit.log"), "a", encoding="utf-8") as fh:
+                fh.write(json.dumps({"time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                                     "event": "smoke", "nonce": s.group(1), "backend": be,
+                                     "model": model}, ensure_ascii=False) + "\n")
+        except OSError:
+            pass
+        print(json.dumps({"decision": "block", "reason": f"UNO smoke ok {s.group(1)} backend:{be}"}))
+        return 0
+    m = PATTERN.match(prompt)
+    if not m:
         return 0
     task = m.group(1).upper()
     path = os.path.join(root, ".uno", "plans", f"{task}.md")
