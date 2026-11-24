@@ -113,7 +113,7 @@ Retry limit: 3 failed attempts at the same check → stop, set status `escalated
 1. Push the branch. If `gh pr list --limit 1` works, open the PR yourself with `gh pr create --draft --base <default> --title "<type>: <task title> (<task-id>)" --body-file <file>`. If `gh` is missing or not signed in, write the title and body into the task's PR column notes and give the owner the compare link. Never `gh pr ready`, `gh pr merge` or approve; settings deny them.
 2. PR description: what changed, why, how verified (outputs), zones touched, Epsilon (security-reviewer) verdict, `depends_on` if any, and a review label (below).
 3. Update the task row: status `in-review`, branch, PR link.
-4. At the start of every `/core:work`, check tasks in `in-review` with `gh pr view <n> --json state,mergeCommit` (if `gh` works). Merged → status `done` and one Done log entry in the format of `templates/tasks.md`: a short summary that points to the branch, PR and merge commit. Code history lives in git; never copy diffs or code into `.uno/`.
+4. At the start of every `/core:work`, check tasks in `in-review` with `gh pr view <n> --json state,mergeCommit` (if `gh` works). Merged → status `done` and one Done log entry (copy `backend:` and `model:` from the plan's `Approved-by:` line) in the format of `templates/tasks.md`: a short summary that points to the branch, PR and merge commit. Code history lives in git; never copy diffs or code into `.uno/`.
 
 ### Review label
 
@@ -128,7 +128,8 @@ Read `Review` from `.uno/project-profile.md`:
   6. touches auth, config, deploy or CI files
   7. Epsilon (security-reviewer) gave anything but a plain PASS
   8. the PR lists a NEEDS HUMAN DECISION item
-  For `review: careful`, list which of the 8 apply so the owner knows what to read. `review: quick` still needs Epsilon PASS and green checks.
+  9. the plan's `Approved-by:` line shows a `backend:` other than `anthropic` (work done with a local or third-party model)
+  For `review: careful`, list which of the 9 apply so the owner knows what to read. `review: quick` still needs Epsilon PASS and green checks.
 - `second-reviewer`: the repo requires another approver. Say so in the PR, add the label as above, and never suggest the owner merge alone.
 
 Never merge, never push to the default branch, never close someone else's PR.

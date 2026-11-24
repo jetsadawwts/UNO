@@ -27,9 +27,10 @@ def sh(*cmd, cwd):
     subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True, env=CLEAN_ENV)
 
 
-def hook(name, event, cwd):
+def hook(name, event, cwd, extra_env=None):
     event.setdefault("cwd", cwd)
-    env = dict(CLEAN_ENV, CLAUDE_PROJECT_DIR=cwd)
+    env = dict({k: v for k, v in CLEAN_ENV.items() if not k.startswith("ANTHROPIC_")},
+               CLAUDE_PROJECT_DIR=cwd, **(extra_env or {}))
     r = subprocess.run([sys.executable, os.path.join(HOOKS, name)], input=json.dumps(event),
                        capture_output=True, text=True, env=env)
     return r.returncode, r.stdout + r.stderr
@@ -105,6 +106,14 @@ def main():
 
     out = hook("approve_on_prompt.py", {"prompt": "อนุมัติ T7"}, repo)[1]
     check("prompt: owner approves T7 (Thai)", "approved plan T7" in out, True)
+    check("approval records backend: anthropic", "backend:anthropic" in open(plan).read(), True)
+    t9 = os.path.join(data, "plans", "T9.md")
+    open(t9, "w").write(FULL_PLAN.format(t="T9"))
+    hook("approve_on_prompt.py", {"prompt": "approve T9"}, repo,
+         {"ANTHROPIC_BASE_URL": "http://ollama.example:11434", "ANTHROPIC_DEFAULT_SONNET_MODEL": "qwen3-coder:30b"})
+    line = [l for l in open(t9).read().splitlines() if l.startswith("Approved-by:")][-1]
+    check("approval records local backend and model",
+          "backend:ollama.example:11434" in line and "model:qwen3-coder:30b" in line, True)
 
     # --- after approval ---
     check("plan: edit after approval", hook("guard_plan.py", edit("src/a.ts"), repo)[0], 0)

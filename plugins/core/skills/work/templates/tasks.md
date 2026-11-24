@@ -17,5 +17,6 @@ Only a human moves a task from `proposed` to `ready`, and from `in-review` to `d
 - branch: chore/T6-easy-lint → PR #12 (merged a1b2c3d) · lead time 1d
 - changed: 11 lint fixes, no logic
 - Epsilon: PASS · review: quick · retries: 0
+- model: anthropic claude (backend and model from the plan's Approved-by line)
 - lesson: (optional, one line worth reusing)
 -->

@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.3 — 2026-11-24
+- Plugin and marketplace descriptions match what UNO does now (shown in `/plugin`).
+- Recommended install source is the GitHub repo (`/plugin marketplace add https://<user>@github.com/<user>/UNO.git`), so only pushed releases reach project sessions.
+- **Which model did the work is recorded.** Plan approval by chat adds `backend:` (anthropic or the host of `ANTHROPIC_BASE_URL`) and `model:` to the `Approved-by:` line and to the audit log; the Done log copies them. Terminal approvals record `backend:unknown`.
+- **Work done with a non-Anthropic model is always `review: careful`** (condition 9), so the owner reads the diff in full.
+- **`scripts/smoke_test.sh <project> [local]`** after updating Claude Code, Ollama or UNO: hook tests, `uno-stable` on a tag, `.uno` link, and a real `claude -p "approve T99"` per backend to prove the hooks load. Set `UNO_LOCAL_URL` for the local check.
+- ONBOARDING: "Local models (Ollama)" — `uno` / `uno-local` shell functions, separate history with `CLAUDE_CONFIG_DIR`, never `--continue` across backends.
+- After updating: nothing to migrate.
+
 ## v0.5.2 — 2026-11-24
 - **Works in Auto mode.** Package installs are no longer an `ask` prompt; `guard_plan` lets an install through only if every package is listed under the approved plan's "Dependencies", blocks unlisted ones as a plan change, blocks installs outside a task or before approval, and blocks chained install commands. `npm install` / `npm ci` from the lock file stay allowed.
 - **`/core:work` opens draft PRs with `gh`** when it is signed in (else writes the PR text for the owner), and marks merged PRs `done` at the start of the next run. `git fetch` only, never `git pull`, in a task.

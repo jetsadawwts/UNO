@@ -145,3 +145,25 @@ git -C ~/UNO/uno-stable checkout v0.5.2
 ```
 `approve_plan.py` and the data folder paths do not change.
 
+## Local models (Ollama)
+
+Claude Code can talk to an Ollama server (v0.14 or later) instead of Anthropic. UNO's hooks and rules work the same; only the model changes. Use it when code must stay on your own server, and only through a VPN or HTTPS — never a plain HTTP address on the internet.
+
+Add to `~/.zshrc`:
+```bash
+uno() { claude --plugin-dir ~/UNO/uno-stable/plugins/core "$@"; }
+uno-local() {
+  local m="${UNO_LOCAL_MODEL:-qwen3-coder:30b}"
+  CLAUDE_CONFIG_DIR=~/.claude-local ANTHROPIC_AUTH_TOKEN=ollama ANTHROPIC_API_KEY="" \
+  ANTHROPIC_BASE_URL="$UNO_LOCAL_URL" ANTHROPIC_MODEL="$m" \
+  ANTHROPIC_DEFAULT_OPUS_MODEL="$m" ANTHROPIC_DEFAULT_SONNET_MODEL="$m" ANTHROPIC_DEFAULT_HAIKU_MODEL="$m" \
+  claude --model "$m" --plugin-dir ~/UNO/uno-stable/plugins/core "$@"
+}
+export UNO_LOCAL_URL=http://<ollama-host>:<port>
+```
+- Set `OLLAMA_CONTEXT_LENGTH` (e.g. 65536) on the server; small contexts make the model forget UNO's rules mid-task.
+- `CLAUDE_CONFIG_DIR` keeps local-model history apart, so `--continue` never sends code read by the local model to Anthropic. Start a new session when you switch.
+- Plans, tasks and approvals in `.uno` are shared by both. A plan approved in a local session records `backend:` and its PR is always `review: careful`.
+- Some models' chat templates fail on tool-result turns ("500 no user query found in messages"); `qwen3-coder` works better than general Qwen models for this.
+- After updating anything: `sh ~/UNO/uno/scripts/smoke_test.sh ~/UNO/projects/<project> local`.
+

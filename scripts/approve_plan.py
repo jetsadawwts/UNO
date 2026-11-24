@@ -39,7 +39,7 @@ def main():
     digest = hashlib.sha256(body.encode("utf-8")).hexdigest()[:12]
     name = subprocess.run(["git", "config", "user.name"], capture_output=True, text=True, cwd=root).stdout.strip() or "owner"
     with open(path, "w", encoding="utf-8") as fh:
-        fh.write(body + f"\n\n{APPROVAL} {name} {datetime.now().isoformat(timespec='minutes')} sha256:{digest}\n")
+        fh.write(body + f"\n\n{APPROVAL} {name} {datetime.now().isoformat(timespec='minutes')} sha256:{digest} via terminal backend:unknown\n")
     print(f"approved {task} (sha256:{digest})")
     return 0
 

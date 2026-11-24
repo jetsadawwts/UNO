@@ -2,7 +2,8 @@
 """UserPromptSubmit hook: the owner approves a plan by typing `approve T7` (or `อนุมัติ T7`).
 
 Only a human can submit a prompt, so an agent cannot trigger this. The hook appends
-`Approved-by: <git user.name> <time> via prompt sha256:<hash>` to .uno/plans/<task>.md
+`Approved-by: <git user.name> <time> via prompt sha256:<hash> backend:<anthropic|host> model:<name>`
+to .uno/plans/<task>.md
 (the same format guard_plan checks) and tells Claude the result. Other prompts pass through.
 Active only in onboarded projects (`.uno/zones` exists).
 """
@@ -18,6 +19,17 @@ APPROVAL = "Approved-by:"
 PATTERN = re.compile(r"^\s*(?:approve|อนุมัติ)\s+(T\d+)\s*$", re.IGNORECASE)
 REQUIRED = ["## Goal", "## UI design", "## Dependencies", "## Files to change", "## Steps",
             "## Verification", "## Rollback"]
+
+
+def backend():
+    """Which model service this Claude Code session talks to, from its own environment."""
+    url = os.environ.get("ANTHROPIC_BASE_URL", "").strip()
+    if not url or "anthropic.com" in url:
+        return "anthropic", os.environ.get("ANTHROPIC_MODEL", "claude")
+    host = re.sub(r"^https?://", "", url).split("/")[0]
+    model = (os.environ.get("ANTHROPIC_MODEL") or os.environ.get("ANTHROPIC_DEFAULT_SONNET_MODEL")
+             or "unknown")
+    return host, model
 
 
 def say(text):
@@ -56,11 +68,13 @@ def main():
         name = "owner"
     stamp = datetime.now(timezone.utc).isoformat(timespec="minutes")
     with open(path, "w", encoding="utf-8") as fh:
-        fh.write(body + f"\n\n{APPROVAL} {name} {stamp} via prompt sha256:{digest}\n")
+        be, model = backend()
+        fh.write(body + f"\n\n{APPROVAL} {name} {stamp} via prompt sha256:{digest} backend:{be} model:{model}\n")
     try:
         with open(os.path.join(root, ".uno", "audit.log"), "a", encoding="utf-8") as fh:
             fh.write(json.dumps({"time": stamp, "session": event.get("session_id"),
-                                 "event": "plan-approved", "task": task, "sha256": digest},
+                                 "event": "plan-approved", "task": task, "sha256": digest,
+                                 "backend": be, "model": model},
                                 ensure_ascii=False) + "\n")
     except OSError:
         pass
