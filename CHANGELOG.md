@@ -2,6 +2,9 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.9 — 2026-11-24
+- Settings templates drop `Write(...)` rules: Claude Code 2.1.3xx applies `Edit(...)` rules to Write too and warns that Write rules never match. Remove them from each project's `.claude/settings.local.json`.
+
 ## v0.5.8 — 2026-11-24
 - **One approval per task:** settings templates set `defaultMode: acceptEdits`, so Claude Code no longer asks before each file edit. The owner's `approve T<n>` on the plan is the confirmation; `guard_plan`/`guard_zones` still block edits without an approved plan or in forbidden zones, and the deny list still applies. Review every change in the draft PR.
 - After updating: add `"defaultMode": "acceptEdits"` under `permissions` in each project's `.claude/settings.local.json`.

@@ -20,7 +20,6 @@
       "Bash(mysql:*)",
       "Bash(mongosh:*)",
       "Edit(//<home>/UNO/uno/**)",
-      "Write(//<home>/UNO/uno/**)",
       "Bash(gh pr merge:*)",
       "Bash(gh pr close:*)",
       "Bash(gh pr review:*)",

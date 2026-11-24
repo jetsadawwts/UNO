@@ -14,7 +14,6 @@
       "Bash(git push --force:*)",
       "Bash(rm -rf:*)",
       "Edit(//<home>/UNO/uno/**)",
-      "Write(//<home>/UNO/uno/**)",
       "Bash(gh pr merge:*)",
       "Bash(gh pr close:*)",
       "Bash(gh pr review:*)",
