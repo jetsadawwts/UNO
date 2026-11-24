@@ -14,7 +14,7 @@ Once started with a task id, carry the task through every step below in one go: 
 1. **Plan approval** — the plan is written; ask the owner to run `approve <task-id>` as a chat message (e.g. `approve T7`), then continue on your own once they say it is done. List every package to install, upgrade or remove under "Dependencies".
 2. **Anything that affects the plan** — a file, step, package, design, approach, acceptance check, risk or rollback different from what was approved, even if small or clearly better. Do not decide alone: bring it to the owner as a joint decision (format below), update the plan with the agreed option, and go back to 1.
 3. **Escalation** — 3 failed attempts at the same check, Epsilon BLOCK, or a NEEDS HUMAN DECISION item.
-4. **Package installs** — each install still shows Claude Code's own permission prompt (`ask`); that is expected, not a reason to pause anything else.
+4. **Package installs** — not asked separately: `guard_plan` lets an install through only if every package is listed under the approved plan's "Dependencies"; anything else is a plan change (point 2). Run each install as one plain command.
 
 **Decide yourself, without asking**, only details that leave the plan exactly as approved: names of variables, functions, tests and commits; how to lay out a test; formatting of lines you already change; re-running a flaky check; fixing a lint or type error your own change caused. Write the notable ones in the PR description. If you are unsure whether something affects the plan, treat it as if it does.
 
@@ -54,7 +54,7 @@ Write the chosen mode and the reason into the task row. When unsure, use **full*
 ## 2. Branch — one task, one branch, from the default branch
 
 1. Find the default branch: `git symbolic-ref --short refs/remotes/origin/HEAD` (strip `origin/`); fall back to `main`, then `master`.
-2. `git fetch origin` then create `<type>/<task-id>-<slug>` **from `origin/<default>`**, e.g. `test/T1-utils-characterization`. Types: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`.
+2. `git fetch origin` (never `git pull` in a task; it can merge outside the plan) then create `<type>/<task-id>-<slug>` **from `origin/<default>`**, e.g. `test/T1-utils-characterization`. Types: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`.
 3. Never check out a branch created before the project moved to personal mode (its tree still tracks `.uno/` or `CLAUDE.md`; `guard_git` blocks it). To reuse its work: `git switch -c <type>/<task-id>-<slug> origin/<default>` then `git cherry-pick <its commits>`.
 4. Never build a task branch on top of another task branch. If the task truly depends on unmerged work, set `depends_on` in the task row, branch from that branch, and say so in the PR description so it is merged in order.
 5. Never commit on the default branch. The `guard_git` hook blocks it.
@@ -110,10 +110,10 @@ Retry limit: 3 failed attempts at the same check → stop, set status `escalated
 
 ## 5. Hand over
 
-1. Push the branch and open a PR (draft if L1). Title: `<type>: <task title> (<task-id>)`.
+1. Push the branch. If `gh pr list --limit 1` works, open the PR yourself with `gh pr create --draft --base <default> --title "<type>: <task title> (<task-id>)" --body-file <file>`. If `gh` is missing or not signed in, write the title and body into the task's PR column notes and give the owner the compare link. Never `gh pr ready`, `gh pr merge` or approve; settings deny them.
 2. PR description: what changed, why, how verified (outputs), zones touched, Epsilon (security-reviewer) verdict, `depends_on` if any, and a review label (below).
 3. Update the task row: status `in-review`, branch, PR link.
-4. When the human merges, the next session marks it `done` and writes one Done log entry in the format of `templates/tasks.md`: a short summary that points to the branch, PR and merge commit. Code history lives in git; never copy diffs or code into `.uno/`.
+4. At the start of every `/core:work`, check tasks in `in-review` with `gh pr view <n> --json state,mergeCommit` (if `gh` works). Merged → status `done` and one Done log entry in the format of `templates/tasks.md`: a short summary that points to the branch, PR and merge commit. Code history lives in git; never copy diffs or code into `.uno/`.
 
 ### Review label
 

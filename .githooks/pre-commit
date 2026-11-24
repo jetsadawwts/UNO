@@ -1,2 +1,5 @@
 #!/bin/sh
-exec python3 "$(git rev-parse --show-toplevel)/scripts/check_no_company_data.py"
+# UNO repo: block company data, then run hook regression tests.
+cd "$(git rev-parse --show-toplevel)" || exit 1
+python3 scripts/check_no_company_data.py || exit 1
+python3 tests/test_hooks.py || { echo "UNO: hook tests failed, commit blocked" >&2; exit 1; }

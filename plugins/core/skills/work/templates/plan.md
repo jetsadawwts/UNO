@@ -16,7 +16,7 @@ sensitive fields and how they are shown, accessibility, new tokens/dependencies,
 
 ## Dependencies (install / upgrade / remove)
 <exact package names and versions, e.g. `xlsx 0.20.3 (upgrade, fixes CVE)`, or "none".
-The owner is still asked at each install; a package not listed here is outside the plan.>
+Installs are checked against this list by `guard_plan` (no separate prompt); a package not listed here is a plan change.>
 
 ## Steps (one commit each, so any step can be reverted alone)
 1.

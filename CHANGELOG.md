@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.2 — 2026-11-24
+- **Works in Auto mode.** Package installs are no longer an `ask` prompt; `guard_plan` lets an install through only if every package is listed under the approved plan's "Dependencies", blocks unlisted ones as a plan change, blocks installs outside a task or before approval, and blocks chained install commands. `npm install` / `npm ci` from the lock file stay allowed.
+- **`/core:work` opens draft PRs with `gh`** when it is signed in (else writes the PR text for the owner), and marks merged PRs `done` at the start of the next run. `git fetch` only, never `git pull`, in a task.
+- Settings templates deny risky `gh` actions (merge, close, review, ready, api write methods, repo, release, secret, variable, workflow, auth) and `git pull`; allow `gh pr create/view/list/edit/checks/diff`.
+- Hooks (plan gate, git guard, zones, self-approval block) enforce in every permission mode, including Auto.
+- **Shell writes need an approved plan too.** `guard_plan` blocks `sed -i`, redirection into project files, `tee`, `cp`, `mv`, `rm`, `touch`, `git apply`, `patch`, `git restore` before the plan is approved or outside a task branch (writes to `.uno/`, `/tmp`, `/dev/null` stay allowed).
+- **Hook regression tests:** `tests/test_hooks.py` (52 cases: git guard, plan gate, self-approval, prompt approval, installs, shell writes). The pre-commit hook runs it after the data check; a failing test blocks the commit.
+- **Stable copy for daily use:** run project sessions from `~/UNO/uno-stable` (a git worktree checked out at a release tag), not from the working copy in `~/UNO/uno`, so uncommitted UNO edits never reach real work. See ONBOARDING "Install, update, rollback".
+
 ## v0.5.1 — 2026-11-23
 Fixes from the first real run (T7):
 - **Approve by typing `approve T7`** (or `อนุมัติ T7`) in chat. New `UserPromptSubmit` hook `approve_on_prompt` reacts only to human prompts, so an agent cannot approve. The agent tried to run `approve_plan.py` itself; `guard_plan` now blocks any Bash call that mentions `approve_plan` or `Approved-by`.

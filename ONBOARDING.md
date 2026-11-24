@@ -128,3 +128,20 @@ Project files (`.uno/`) are not touched by a rollback.
 - `guard_git` reads simple command shapes. Aliases, scripts or `sh -c "..."` can get around it; branch protection on the remote is the real control.
 - `ui-designer` preloads Anthropic's `frontend-design` skill via `skills:` and reports `loaded` / `not loaded`. Plugin agents preloading skills has had bugs in some Claude Code versions; check the report line. The skill is used only if it is installed (`/plugin install frontend-design@claude-plugins-official`). Enable it per project.
 - Superpowers is a third-party project; its skill names may change. `/core:work` falls back to the built-in loop if a skill is missing.
+
+## Stable copy for daily use
+
+Project sessions load UNO from a worktree pinned to a release tag, so edits in progress in `~/UNO/uno` never reach real work.
+
+```bash
+# once
+cd ~/UNO/uno && git worktree add ~/UNO/uno-stable v0.5.2
+# daily
+cd ~/UNO/projects/<project> && claude --plugin-dir ~/UNO/uno-stable/plugins/core
+# move to a new release (after it is committed, tagged and its tests pass)
+git -C ~/UNO/uno-stable checkout v0.5.3
+# roll back
+git -C ~/UNO/uno-stable checkout v0.5.2
+```
+`approve_plan.py` and the data folder paths do not change.
+

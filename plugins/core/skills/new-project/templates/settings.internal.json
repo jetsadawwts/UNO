@@ -13,16 +13,26 @@
       "Bash(git push --force:*)",
       "Bash(rm -rf:*)",
       "Edit(//<home>/UNO/uno/**)",
-      "Write(//<home>/UNO/uno/**)"
+      "Write(//<home>/UNO/uno/**)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr close:*)",
+      "Bash(gh pr review:*)",
+      "Bash(gh pr ready:*)",
+      "Bash(gh api -X DELETE:*)",
+      "Bash(gh api -X PATCH:*)",
+      "Bash(gh api -X PUT:*)",
+      "Bash(gh api --method DELETE:*)",
+      "Bash(gh api --method PATCH:*)",
+      "Bash(gh api --method PUT:*)",
+      "Bash(gh repo:*)",
+      "Bash(gh release:*)",
+      "Bash(gh secret:*)",
+      "Bash(gh variable:*)",
+      "Bash(gh workflow:*)",
+      "Bash(gh auth:*)",
+      "Bash(git pull:*)"
     ],
     "ask": [
-      "Bash(npm install:*)",
-      "Bash(pnpm add:*)",
-      "Bash(yarn add:*)",
-      "Bash(pip install:*)",
-      "Bash(dotnet add:*)",
-      "Bash(npx skills:*)",
-      "Bash(npm install -g:*)",
       "Bash(curl:*)",
       "Bash(wget:*)"
     ],
@@ -60,7 +70,10 @@
       "Bash(cat:*)",
       "Bash(grep:*)",
       "Bash(wc:*)",
-      "Read(//<home>/UNO/uno/**)"
+      "Read(//<home>/UNO/uno/**)",
+      "Bash(gh pr edit:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr diff:*)"
     ]
   }
 }

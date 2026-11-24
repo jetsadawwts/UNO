@@ -93,6 +93,115 @@ def check(root, tool_input):
             f"`! python3 ~/UNO/uno/scripts/approve_plan.py {task}`. No code edits before that.")
 
 
+INSTALL_RE = re.compile(r"\b(npm\s+(install|i|add|uninstall|remove)|pnpm\s+(add|install|remove)|yarn\s+(add|remove)|pip3?\s+install|dotnet\s+add\s+\S*\s*package)\b")
+
+
+SAFE_WITH_INSTALL = (
+    "cd", "pwd", "ls", "cat", "grep", "echo", "mkdir", "test", "true",
+    "npm run", "npm test", "npm ci", "npm ls", "npm audit", "npm outdated", "npm view",
+    "npx tsc", "npx vitest", "npx eslint", "npx prettier",
+    "git status", "git diff", "git log", "git add", "git commit", "git show",
+    "pip list", "pip show", "python3 -m pytest", "pytest", "dotnet build", "dotnet test", "dotnet restore",
+)
+HIDDEN = ("`", "$(", "<(", ">(", "| sh", "| bash", "|sh", "|bash", "eval ")
+
+
+def _packages(part):
+    import shlex
+    try:
+        tok = shlex.split(part)
+    except ValueError:
+        return None
+    return [t for t in tok[2:] if not t.startswith("-") and t not in ("package", "add")]
+
+
+def _plan_deps(root):
+    m = TASK_RE.search(branch(root))
+    if not m:
+        return None, "UNO: package changes only happen inside a task (/core:work) with an approved plan."
+    task = m.group(1).upper()
+    plan = os.path.join(root, ".uno", "plans", f"{task}.md")
+    status = approval_status(plan)
+    if status is not None:
+        return None, f"UNO: plan for {task} is {status}; no package changes before the owner approves it."
+    deps, on = [], False
+    for line in open(plan, encoding="utf-8").read().splitlines():
+        if line.startswith("## "):
+            on = line.lower().startswith("## dependencies")
+        elif on:
+            deps.append(line.lower())
+    return (task, "\n".join(deps)), None
+
+
+def _bare(p):
+    n = p.rsplit("@", 1)[0] if p.rfind("@") > 0 else p
+    return re.split(r"[=<>~!]", n)[0].lower()
+
+
+def install_check(root, cmd):
+    """Installs need an approved plan listing every package. A chained command is allowed
+    only if every other part is a known, harmless command; anything unfamiliar is blocked."""
+    if not INSTALL_RE.search(cmd):
+        return None
+    if any(h in cmd for h in HIDDEN):
+        return "UNO: install chained with a hidden or piped command (backticks, $(), | sh, eval) is blocked."
+    parts = [p.strip() for p in re.split(r"&&|\|\||;|\n", cmd) if p.strip()]
+    if any("|" in p for p in parts):
+        return "UNO: install chained with a pipe is blocked; run the install as its own command."
+    info = None
+    for part in parts:
+        if INSTALL_RE.search(part):
+            pkgs = _packages(part)
+            if pkgs is None:
+                return "UNO: could not read this install command; run it as a plain command."
+            if not pkgs:
+                continue  # npm install / npm ci from the lock file
+            if info is None:
+                info, err = _plan_deps(root)
+                if err:
+                    return err
+            task, text = info
+            missing = [p for p in pkgs if _bare(p) not in text]
+            if missing:
+                return (f"UNO: {', '.join(missing)} not in the Dependencies of the approved plan {task}. "
+                        f"This is a PLAN CHANGE: ask the owner, update the plan, get it re-approved.")
+        elif not part.startswith(SAFE_WITH_INSTALL):
+            return (f"UNO: '{part[:60]}' is not a known safe command to chain with an install. "
+                    f"Run the install on its own, and the other command separately.")
+    return None
+
+
+WRITE_CMDS = re.compile(r"(^|[;&|]\s*|\s)(sed\s+(-[a-zA-Z]*i|--in-place)|perl\s+-[a-zA-Z]*i|tee\b|cp\b|mv\b|rm\b|touch\b|truncate\b|git\s+apply\b|patch\b|git\s+restore\b|git\s+checkout\s+\S*\s*--\s)")
+REDIRECT = re.compile(r"(?<![0-9&>])>{1,2}\s*([^\s;&|]+)")
+
+
+def writes_files(cmd):
+    """True if a shell command looks like it writes or deletes files outside .uno/ and /tmp."""
+    if WRITE_CMDS.search(cmd):
+        return True
+    for target in REDIRECT.findall(cmd):
+        if target in ("/dev/null", "/dev/stderr", "/dev/stdout"):
+            continue
+        if target.startswith((".uno/", "/tmp/", "$TMPDIR")) or "/.uno/" in target:
+            continue
+        return True
+    return False
+
+
+def bash_write_check(root, cmd):
+    if not writes_files(cmd):
+        return None
+    m = TASK_RE.search(branch(root))
+    if not m:
+        return ("UNO: this shell command writes files, and the branch has no task id. "
+                "Start with /core:work <task-id>; use the Edit/Write tools for code changes.")
+    task = m.group(1).upper()
+    status = approval_status(os.path.join(root, ".uno", "plans", f"{task}.md"))
+    if status is not None:
+        return (f"UNO: plan for {task} is {status}; no file changes (shell or editor) before the owner approves it.")
+    return None
+
+
 def main():
     try:
         event = json.load(sys.stdin)
@@ -106,6 +215,10 @@ def main():
         return 0
     if tool == "Bash":
         cmd = (event.get("tool_input") or {}).get("command", "")
+        why = install_check(root, cmd) or bash_write_check(root, cmd)
+        if why:
+            print(why, file=sys.stderr)
+            return 2
         if "approve_plan" in cmd or "Approved-by" in cmd:
             print("UNO: only the owner approves a plan. Show the plan, stop, and ask the owner to run "
                   "`! python3 ~/UNO/uno/scripts/approve_plan.py <task-id>` themselves. Do not run it.",
