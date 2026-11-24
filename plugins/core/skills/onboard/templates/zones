@@ -12,12 +12,30 @@
 **/secrets/**
 **/*.pem
 **/*.key
+**/kubeconfig*
+**/*secret*.y*ml
+**/*.tfstate*
+**/*.tfvars
 # vendor-maintained module, example:
 # src/his-adapter/**
 
 [review]
 **/migrations/**
 **/auth/**
+# infrastructure and delivery: build, deploy and runtime config
+**/Dockerfile*
+**/*compose*.y*ml
+**/k8s/**
+**/kubernetes/**
+**/helm/**
+**/charts/**
+**/terraform/**
+**/*.tf
+**/kustomization.y*ml
+.github/workflows/**
+.gitlab-ci.yml
+**/Jenkinsfile
+**/kafka/**
 # personal/sensitive-data paths found in discovery, example:
 # src/patients/**
 # src/payroll/**

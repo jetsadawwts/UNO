@@ -16,7 +16,15 @@ Goal: change the structure, keep the behaviour. If behaviour must change, that i
 
 ## Step 1 — Why (gate: Tech Lead)
 
-Write `docs/adr/<NNNN>-refactor-<area>.md` from `templates/refactor-adr.md`: the pain, the target shape, how success is measured, the rollback plan, and the scope boundary. Stop for approval.
+Ask Lambda (`architect`) to write `docs/adr/<NNNN>-refactor-<area>.md` from `templates/refactor-adr.md`: the pain, the target shape, how success is measured, the rollback plan, and the scope boundary. Stop for approval.
+
+## Moving to another language or framework
+
+Treat it as a refactor of the whole part: behaviour stays, the language changes.
+- The ADR names the reason (performance, platform, team skills, safety), the target (e.g. Rust + Leptos, Next.js, Python + FastAPI, PHP + Laravel), the options not chosen, and the cost of running two versions side by side.
+- Safety net at the boundary both versions share: API contract tests, CLI output, or on-screen checks through the fake-data preview with BEFORE screenshots of every page. The same tests must pass on old and new.
+- Strangler: one route, endpoint or screen per task; old and new run side by side until every piece matches; then cut over with a release whose rollback is the last old build.
+- Add the new part as a row in the profile's `## Stack` before the first task, so verify and Delta use its commands.
 
 ## Step 2 — Safety net (gate: QA lens)
 

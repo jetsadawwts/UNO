@@ -89,8 +89,11 @@ No code edit before the owner approves a plan. The `guard_plan` hook enforces it
 
 **Team members inside `/core:work`:**
 - Before writing the plan, ask Beta (`codebase-explorer`) concrete questions instead of reading whole folders yourself; put its file:line evidence in the plan's "Files to change".
-- When a planned step needs tests, call Delta (`test-writer`) with that step: characterization tests first (commit them separately), then failing tests for the new behaviour; you change the code.
+- When a planned step needs tests, call Delta (`test-writer`) with that step and the Stack row of the part it touches (its test runner and style): characterization tests first (commit them separately), then failing tests for the new behaviour; you change the code.
 - UI: Gamma (`ui-designer`) `design` mode for the plan, `build` mode after approval. Security: Epsilon (`security-reviewer`) before every PR.
+- Infrastructure and delivery (Dockerfile, compose, Kubernetes, Helm, Terraform, CI/CD): Iota (`devops-engineer`) writes and validates it locally; anything for shared systems goes into the PR as commands for the owner.
+- Database schema, migrations, SQL, ORM models, backfills: Kappa (`data-engineer`), tested up/down/up on the local or test database; the PR is `review: careful`.
+- A task that turns out bigger than one task (new service, cross-part change, new language or framework, major dependency): stop and ask Lambda (`architect`) for an ADR before the plan; the owner approves the ADR, then each of its tasks gets its own plan.
 - Documentation (README, user guide, deploy guide, developer docs): Theta (`doc-writer`) writes it inside the plan. A code task that changes what users or operators do adds a final plan step for Theta to update the affected docs; list those files in the plan.
 
 **UNO rules that override any skill:**
@@ -125,7 +128,7 @@ Only when `.uno/project-profile.md` has a `## Preview` section with `- Data: fak
 
 ## 4. Verify — evidence, not opinion
 
-Run the task's acceptance check plus the project's baseline commands from `CLAUDE.md` (build, type check, lint, tests). Paste the actual command output summary in the PR. A failing check that also failed at baseline is recorded, not hidden.
+Run the task's acceptance check plus, for every part of the profile's `## Stack` the change touches, that part's build, test and lint commands (fall back to `CLAUDE.md` if the profile has no Stack table). Do not assume Node: a Rust part runs `cargo`, a Python part `pytest`/`ruff`, a PHP part `composer`/`phpunit`, and so on, exactly as the table says. Paste the actual command output summary in the PR. A failing check that also failed at baseline is recorded, not hidden.
 
 Retry limit: 3 failed attempts at the same check → stop, set status `escalated`, write what you tried and the last error into the task row, and tell the user.
 

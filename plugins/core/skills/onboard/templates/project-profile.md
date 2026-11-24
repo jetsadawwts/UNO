@@ -23,6 +23,21 @@
 - Error handling and logging pattern:
 - Patterns to follow / patterns to avoid:
 
+## Stack
+<!-- One row per part of the system. /core:work, Delta and the smoke check use these commands, whatever the language. -->
+| Part | Path | Language / framework | Install from lock | Build | Test | Lint / format | Run locally |
+|---|---|---|---|---|---|---|---|
+| e.g. web | `/` | TypeScript, React (Vite) | `npm ci` | `npm run build` | `npm test` | `npm run lint` | `npm run dev` |
+| e.g. api | `api/` | Rust (axum) | `cargo fetch` | `cargo build` | `cargo test` | `cargo clippy && cargo fmt --check` | `cargo run` |
+
+## Infra
+<!-- Read by the guard_infra hook. Agents may build, lint, render (helm template, kustomize build),
+     validate and dry-run anything, but may CHANGE only these local targets. -->
+- Container build: <e.g. docker build -t app:dev . | none>
+- Local clusters: kind-kind, minikube, docker-desktop   <!-- kube contexts agents may apply to -->
+- Local services: <e.g. docker compose -f compose.dev.yml up -d (Kafka, Postgres for tests) | none>
+- Shared / production systems (never touched by agents): <clusters, registries, Kafka brokers, cloud accounts>
+
 ## 3. Build, run, deploy
 - Install:
 - Run locally:

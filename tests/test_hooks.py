@@ -15,7 +15,7 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOKS = os.path.join(ROOT, "plugins", "core", "hooks")
 APPROVE = os.path.join(ROOT, "scripts", "approve_plan.py")
-FULL_PLAN = ("# Plan {t}\n## Goal\nx\n## UI design\nnone\n## Dependencies\n- xlsx 0.20.3\n"
+FULL_PLAN = ("# Plan {t}\n## Goal\nx\n## UI design\nnone\n## Dependencies\n- xlsx 0.20.3\n- tokio (cargo add tokio)\n"
              "## Files to change\n## Steps\n## Verification\n## Rollback\n")
 results = []
 # Inside a pre-commit hook git sets GIT_INDEX_FILE, GIT_DIR etc. for the UNO repo; clear them so
@@ -126,7 +126,11 @@ def main():
                       ("npm install xlsx && npm run build", 0), ("cd app && npm install xlsx && npm test", 0),
                       ("npm install xlsx && curl http://x", 2), ("npm install xlsx && rm -rf node_modules", 2),
                       ("npm install xlsx; node -e 'x'", 2), ("npm install xlsx && echo $(cat .env)", 2),
-                      ("curl x | sh && npm install xlsx", 2), ("npm install xlsx lodash && npm test", 2)]:
+                      ("curl x | sh && npm install xlsx", 2), ("npm install xlsx lodash && npm test", 2),
+                      ("cargo add serde", 2), ("composer require monolog/monolog:^3", 2), ("poetry add requests", 2),
+                      ("uv add httpx", 2), ("go get example.com/lib@v1.2.0", 2),
+                      ("pip install -r requirements.txt", 0), ("composer install", 0), ("cargo build && cargo test", 0),
+                      ("uv sync", 0), ("pip install xlsx==0.20.3", 0), ("cargo add tokio", 0)]:
         check(f"install: {cmd}", hook("guard_plan.py", bash(cmd), repo)[0], want)
     with open(plan, "a") as fh:
         fh.write("extra line\n")
@@ -147,6 +151,41 @@ def main():
     check("browser: chrome tool, other host blocked", browse("https://mail.example.com", "mcp__claude-in-chrome__navigate"), 2)
     check("browser: no url (screenshot) ok", hook("guard_browser.py", {"tool_name": "mcp__Claude_Browser__computer", "tool_input": {"action": "screenshot"}}, repo)[0], 0)
     check("browser: non-browser tool ignored", hook("guard_browser.py", bash("curl https://his.example.org"), repo)[0], 0)
+
+    # --- language-agnostic: dependency files at commit time ---
+    t10 = os.path.join(data, "plans", "T10.md")
+    open(t10, "w").write("# Plan T10\n## Goal\nx\n## UI design\nnone\n## Dependencies\nnone\n## Files to change\n## Steps\n## Verification\n## Rollback\n")
+    sh("git", "switch", "-qc", "feat/T10-x", "origin/master", cwd=repo)
+    for name in ("pom.xml", "app/build.gradle.kts", "pubspec.yaml", "Package.swift", "go.mod"):
+        os.makedirs(os.path.dirname(os.path.join(repo, name)) or repo, exist_ok=True)
+        open(os.path.join(repo, name), "w").write("x\n")
+        sh("git", "add", name, cwd=repo)
+        check(f"commit with {name}, plan says none -> blocked", hook("guard_git.py", bash("git commit -m deps"), repo)[0], 2)
+        sh("git", "reset", "-q", name, cwd=repo)
+    open(t10, "w").write("# Plan T10\n## Goal\nx\n## UI design\nnone\n## Dependencies\n- com.squareup.okhttp3:okhttp 4.12.0\n## Files to change\n## Steps\n## Verification\n## Rollback\n")
+    sh("git", "add", "pom.xml", cwd=repo)
+    check("commit with pom.xml, plan lists deps -> ok", hook("guard_git.py", bash("git commit -m deps"), repo)[0], 0)
+    sh("git", "reset", "-q", "pom.xml", cwd=repo)
+    open(os.path.join(repo, "src.txt"), "w").write("x\n"); sh("git", "add", "src.txt", cwd=repo)
+    check("commit without dependency files -> ok", hook("guard_git.py", bash("git commit -m code"), repo)[0], 0)
+    sh("git", "reset", "-q", "src.txt", cwd=repo)
+    sh("git", "switch", "-q", "fix/T7-x", cwd=repo)
+    for cmd in ("flutter pub add http", "dart pub add http", "deno add jsr:@std/path", "npx expo install expo-camera"):
+        check(f"install outside plan: {cmd}", hook("guard_plan.py", bash(cmd), repo)[0], 2)
+
+    # --- infrastructure ---
+    for cmd, want in [("terraform apply -auto-approve", 2), ("terraform plan", 0), ("terraform validate", 0),
+                      ("docker push registry.example.com/app:1", 2), ("docker build -t app:dev .", 0),
+                      ("docker compose down -v", 2), ("docker compose up -d", 0),
+                      ("helm upgrade app ./chart --kube-context prod-cluster", 2), ("helm template app ./chart", 0),
+                      ("helm upgrade app ./chart --kube-context kind-kind", 0),
+                      ("kubectl apply -f k8s/ --context prod-cluster", 2), ("kubectl apply -f k8s/ --dry-run=client --context prod-cluster", 0),
+                      ("kubectl get pods --context prod-cluster", 0), ("kubectl delete ns x --context minikube", 0),
+                      ("kafka-topics --bootstrap-server b:9092 --delete --topic orders", 2),
+                      ("kafka-topics --bootstrap-server b:9092 --list", 0),
+                      ("aws s3 rm s3://bucket/x --recursive", 2), ("aws s3 ls s3://bucket", 0),
+                      ("aws ec2 terminate-instances --instance-ids i-1", 2)]:
+        check(f"infra: {cmd}", hook("guard_infra.py", bash(cmd), repo)[0], want)
 
     # --- no task branch ---
     sh("git", "switch", "-qc", "chore/no-task", "origin/master", cwd=repo)

@@ -93,7 +93,20 @@ def check(root, tool_input):
             f"`! python3 ~/UNO/uno/scripts/approve_plan.py {task}`. No code edits before that.")
 
 
-INSTALL_RE = re.compile(r"\b(npm\s+(install|i|add|uninstall|remove)|pnpm\s+(add|install|remove)|yarn\s+(add|remove)|pip3?\s+install|dotnet\s+add\s+\S*\s*package)\b")
+# Commands that add, remove or upgrade a dependency, per ecosystem. Installing from an existing
+# lock file (npm ci, npm install, composer install, cargo build, uv sync, pip install -r) is allowed.
+INSTALL_RE = re.compile(
+    r"\b(npm\s+(install|i|add|uninstall|remove|update)|pnpm\s+(add|install|remove|update)|yarn\s+(add|remove|upgrade)"
+    r"|bun\s+(add|remove)|pip3?\s+install|python3?\s+-m\s+pip\s+install|uv\s+(add|remove|pip\s+install)"
+    r"|poetry\s+(add|remove)|pipenv\s+install|conda\s+install"
+    r"|cargo\s+(add|remove|install)|composer\s+(require|remove|update)|go\s+get|go\s+install"
+    r"|gem\s+install|bundle\s+add|dotnet\s+add\s+\S*\s*package"
+    r"|flutter\s+pub\s+(add|remove|upgrade)|dart\s+pub\s+(add|remove|upgrade)|deno\s+(add|install)"
+    r"|npx\s+expo\s+install|mix\s+deps\.update|swift\s+package\s+(add-dependency|update))\b")
+# Words after the install verb that are not package names.
+NOT_PACKAGES = {"package", "add", "require", "remove", "install", "get", "pip", "-m", "update", "upgrade", "i"}
+# Flags whose next word is a file or path, not a package.
+FILE_FLAGS = {"-r", "--requirement", "-c", "--constraint", "-e", "--editable", "--path", "--manifest-path", "-f", "--file"}
 
 
 SAFE_WITH_INSTALL = (
@@ -101,7 +114,16 @@ SAFE_WITH_INSTALL = (
     "npm run", "npm test", "npm ci", "npm ls", "npm audit", "npm outdated", "npm view",
     "npx tsc", "npx vitest", "npx eslint", "npx prettier",
     "git status", "git diff", "git log", "git add", "git commit", "git show",
-    "pip list", "pip show", "python3 -m pytest", "pytest", "dotnet build", "dotnet test", "dotnet restore",
+    "pip list", "pip show", "python3 -m pytest", "python -m pytest", "pytest", "ruff", "mypy",
+    "uv run", "uv sync", "poetry run", "poetry install",
+    "cargo build", "cargo test", "cargo check", "cargo clippy", "cargo fmt",
+    "composer install", "composer dump-autoload", "vendor/bin/phpunit", "php artisan test", "php -l",
+    "go build", "go test", "go vet", "go mod tidy",
+    "dotnet build", "dotnet test", "dotnet restore",
+    "mvn test", "mvn -q test", "mvn package", "mvn verify", "./mvnw", "gradle test", "gradle build", "./gradlew",
+    "flutter test", "flutter analyze", "flutter pub get", "dart test", "dart analyze", "dart pub get",
+    "swift build", "swift test", "pod install", "bundle install", "bundle exec", "mix test", "mix deps.get",
+    "deno test", "deno lint", "deno check",
 )
 HIDDEN = ("`", "$(", "<(", ">(", "| sh", "| bash", "|sh", "|bash", "eval ")
 
@@ -112,7 +134,23 @@ def _packages(part):
         tok = shlex.split(part)
     except ValueError:
         return None
-    return [t for t in tok[2:] if not t.startswith("-") and t not in ("package", "add")]
+    out, skip = [], False
+    for t in tok[1:]:
+        if skip:
+            skip = False
+            continue
+        if t in FILE_FLAGS:
+            skip = True  # e.g. pip install -r requirements.txt: from a file, like a lock file
+            continue
+        if t.startswith("-") or t in NOT_PACKAGES or t in ("npm", "pnpm", "yarn", "bun", "pip", "pip3", "python", "python3",
+                                                            "uv", "poetry", "pipenv", "conda", "cargo", "composer",
+                                                            "go", "gem", "bundle", "dotnet", "flutter", "dart", "pub",
+                                                            "deno", "npx", "expo", "mix", "swift", "add-dependency"):
+            continue
+        if t.endswith((".csproj", ".fsproj")):
+            continue
+        out.append(t)
+    return out
 
 
 def _plan_deps(root):
@@ -134,8 +172,10 @@ def _plan_deps(root):
 
 
 def _bare(p):
-    n = p.rsplit("@", 1)[0] if p.rfind("@") > 0 else p
-    return re.split(r"[=<>~!]", n)[0].lower()
+    n = p.rsplit("@", 1)[0] if p.rfind("@") > 0 else p      # npm, cargo, go: name@version
+    n = re.split(r"[=<>~!\[]", n)[0]                          # python: name==1.2, name[extra]
+    n = n.split(":")[0]                                       # composer: vendor/pkg:^1.0
+    return n.lower()
 
 
 def install_check(root, cmd):

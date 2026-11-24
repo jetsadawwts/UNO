@@ -89,6 +89,47 @@ def tracks_personal_files(root, ref):
     return bool(listed)
 
 
+# Dependency manifests and lock files of any ecosystem. Language-agnostic rule: a commit that
+# changes one of these needs an approved plan whose "Dependencies" section is not "none".
+MANIFESTS = re.compile(r"(^|/)(package\.json|package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|pnpm-lock\.yaml|bun\.lockb?"
+    r"|deno\.json|deno\.lock|Cargo\.toml|Cargo\.lock|pyproject\.toml|poetry\.lock|uv\.lock|Pipfile(\.lock)?"
+    r"|requirements[^/]*\.(txt|in)|setup\.(py|cfg)|environment\.ya?ml|composer\.(json|lock)|go\.(mod|sum)"
+    r"|pom\.xml|build\.gradle(\.kts)?|settings\.gradle(\.kts)?|gradle\.lockfile|libs\.versions\.toml"
+    r"|Gemfile(\.lock)?|.+\.gemspec|pubspec\.(yaml|lock)|Podfile(\.lock)?|Package\.(swift|resolved)|Cartfile(\.resolved)?"
+    r"|mix\.(exs|lock)|.+\.(csproj|fsproj|vbproj)|packages\.lock\.json|Directory\.Packages\.props|paket\.(dependencies|lock)"
+    r"|conanfile\.(txt|py)|vcpkg\.json|CMakeLists\.txt|stack\.yaml|cabal\.project|.+\.cabal|build\.sbt|project\.clj|deps\.edn"
+    r"|Chart\.(yaml|lock)|requirements\.yaml|\.terraform\.lock\.hcl)$")
+TASK_RE = re.compile(r"(?:^|[/_-])(T\d+)(?:[/_-]|$)", re.IGNORECASE)
+
+
+def plan_dependencies(root, branch):
+    """(task, text of the approved plan's Dependencies section) or (task, None) if no plan."""
+    m = TASK_RE.search(branch or "")
+    if not m:
+        return None, None
+    task = m.group(1).upper()
+    try:
+        text = open(os.path.join(root, ".uno", "plans", f"{task}.md"), encoding="utf-8").read()
+    except OSError:
+        return task, None
+    sec = re.search(r"^## Dependencies[^\n]*\n(.*?)(?=^## |\Z)", text, re.M | re.S)
+    body = re.sub(r"<[^>]*>", "", sec.group(1)).strip() if sec else ""
+    return task, body
+
+
+def manifest_check(root, current):
+    staged = git(root, "diff", "--cached", "--name-only").splitlines()
+    changed = [p for p in staged if MANIFESTS.search(p)]
+    if not changed:
+        return None
+    task, deps = plan_dependencies(root, current)
+    if deps is None or deps.lower() in ("", "none", "-", "n/a"):
+        return (f"UNO: this commit changes dependency files ({', '.join(changed[:5])}) but the plan"
+                f"{' for ' + task if task else ''} lists no dependencies. That is a PLAN CHANGE: ask the owner, "
+                f"add the packages to the plan's Dependencies, get it re-approved, then commit.")
+    return None
+
+
 def check(root, command):
     base = default_branch(root)
     current = git(root, "rev-parse", "--abbrev-ref", "HEAD")
@@ -97,6 +138,10 @@ def check(root, command):
         if not args:
             continue
         sub, rest = args[0], args[1:]
+        if sub == "commit" and current != base:
+            why = manifest_check(root, current)
+            if why:
+                return why
         if sub in ("checkout", "switch"):
             ref = checkout_target(sub, rest)
             if ref and tracks_personal_files(root, ref):

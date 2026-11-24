@@ -13,8 +13,11 @@ AI team members are named in lifecycle order. People hold **roles** (`owner`, `t
 | Zeta | `release-manager` | release notes, deploy steps, rollback plan | ops, tech-lead | `.uno/releases/` only | live (`/core:release`) |
 | Eta | `incident-scribe` | incident record, likely causes, fix + test tasks | ops | `.uno/` only | live (`/core:incident`) |
 | Theta | `doc-writer` | README, user guides, deploy/operations and developer docs, checked against the code | owner, ops | documentation files only | live (called by `work`, suggested by `release`) |
+| Iota | `devops-engineer` | Docker, compose, Kubernetes, Helm, Terraform, CI/CD, local dev environments; validates locally, hands the owner commands for shared systems | ops | infrastructure and pipeline files only; local targets only | live (called by `work`) |
+| Kappa | `data-engineer` | schema design, reversible migrations, queries and indexes, backfills on local/test data | tech-lead, security | schema, migration, SQL and ORM model files only; local/test databases only | live (called by `work`) |
+| Lambda | `architect` | ADRs for changes bigger than one task: options, trade-offs, rollout, task breakdown | tech-lead, owner | ADRs and `.uno/` notes only | live (called by `intake`, `refactor`, `work`) |
 
-Reserved names for new members: Iota, Kappa, Lambda.
+Reserved names for new members, in order: Mu, Nu, Xi, Omicron, Rho, Tau, Upsilon, Phi, Chi, Psi (Pi, Sigma, Omega kept for last: they read as symbols).
 Subagents cannot start other subagents: a skill (run by Uno) calls Beta first and passes its answer on.
 
 Rules

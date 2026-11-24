@@ -2,6 +2,20 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.7 — 2026-11-24
+- **Language-agnostic dependency rule at commit time:** `guard_git` blocks a commit that changes any dependency manifest or lock file (package.json, Cargo.toml, pyproject.toml, requirements*.txt, composer.json, go.mod, pom.xml, build.gradle(.kts), libs.versions.toml, Gemfile, pubspec.yaml, Podfile, Package.swift, mix.exs, *.csproj, vcpkg.json, CMakeLists.txt, build.sbt and more) while the approved plan's Dependencies says none — whatever tool made the change.
+- Install commands also gated for Flutter/Dart, Deno, Expo, Elixir, Swift; settings allow build/test for Maven, Gradle, Flutter, Dart, Swift, Ruby, Elixir, Deno.
+- **Works for any language, not only Node.** New profile table `## Stack` (one row per part: language, install-from-lock, build, test, lint, run). `/core:work` verify and Delta use each part's own commands.
+- **Dependency gate covers every ecosystem:** npm/pnpm/yarn/bun, pip/uv/poetry/pipenv/conda, cargo, composer, go, gem/bundle, dotnet. Installs from a lock or requirements file (`npm ci`, `composer install`, `pip install -r`, `uv sync`, `cargo build`) stay allowed; adding a package must be in the approved plan. Python `name==1.2`, composer `vendor/pkg:^1`, cargo/go `name@version` are matched by name. (`cargo add` used to bypass the gate.)
+- Settings templates allow read/test/build commands for Rust, Python, PHP, Go, .NET and Next.js.
+- `/core:refactor`: "Moving to another language or framework" — ADR with reason and options, boundary tests that run on old and new, strangler one piece per task, cut-over release with rollback to the last old build.
+- **Team of 12.** Iota (`devops-engineer`): Docker, compose, Kubernetes, Helm, Terraform, CI/CD — validates locally, hands the owner exact commands for shared systems. Kappa (`data-engineer`): schema, reversible migrations (up/down/up on a local DB), queries, backfills; sensitive columns named. Lambda (`architect`): ADRs with options, trade-offs, rollout and task breakdown for changes bigger than one task; called by intake, refactor and work. Reserved names: Mu to Psi; Pi, Sigma, Omega last.
+- **Infrastructure guard (`guard_infra`):** agents may build, lint, render and dry-run Docker, Kubernetes, Helm, Terraform and Kafka, and change only local targets. Blocked: kubectl/helm writes to any context not listed under the profile's `## Infra` → `Local clusters`; `terraform`/`tofu`/`pulumi` apply, destroy, import; `docker push`/`login`; cloud CLIs that write (aws, gcloud, az…, S3/GCS writes); Kafka topic/config/ACL/offset changes; deleting Docker volumes. Settings deny reading kubeconfig, tfstate, tfvars, `~/.aws`, `~/.docker/config.json`.
+- Zones template puts Dockerfiles, compose files, k8s/helm/charts, Terraform, CI pipelines and Kafka config in `review`; kubeconfig, `*secret*.yaml`, tfstate and tfvars in `forbidden`. Helm `Chart.yaml`/`Chart.lock` and `.terraform.lock.hcl` count as dependency files.
+- Profile gets an `## Infra` section (container build, local clusters, local services, shared systems never touched).
+- Hook tests: 106 cases.
+- After updating: add a `## Stack` table to each project's profile; add the new allow rules to each `.claude/settings.local.json` if you want fewer prompts.
+
 ## v0.5.6 — 2026-11-24
 - **UNO can look at the running app — only on fake data.** New profile section `## Preview` (run command, URL, allowed hosts, `Data: none | fake`, who confirmed). `/core:work` step 3b drives the built-in browser for UI checks, BEFORE/AFTER screenshots (`.uno/designs/<task>/`) and user-guide images; without `Data: fake` it skips and says so.
 - **`guard_browser` hook:** any browser tool (built-in browser, Claude in Chrome, Playwright MCP) may open only localhost and the profile's allowed hosts, and only when `Data: fake`. Protects against a remembered login being used on production when test and real accounts are the same.
