@@ -2,6 +2,10 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.8 — 2026-11-24
+- **One approval per task:** settings templates set `defaultMode: acceptEdits`, so Claude Code no longer asks before each file edit. The owner's `approve T<n>` on the plan is the confirmation; `guard_plan`/`guard_zones` still block edits without an approved plan or in forbidden zones, and the deny list still applies. Review every change in the draft PR.
+- After updating: add `"defaultMode": "acceptEdits"` under `permissions` in each project's `.claude/settings.local.json`.
+
 ## v0.5.7 — 2026-11-24
 - **Language-agnostic dependency rule at commit time:** `guard_git` blocks a commit that changes any dependency manifest or lock file (package.json, Cargo.toml, pyproject.toml, requirements*.txt, composer.json, go.mod, pom.xml, build.gradle(.kts), libs.versions.toml, Gemfile, pubspec.yaml, Podfile, Package.swift, mix.exs, *.csproj, vcpkg.json, CMakeLists.txt, build.sbt and more) while the approved plan's Dependencies says none — whatever tool made the change.
 - Install commands also gated for Flutter/Dart, Deno, Expo, Elixir, Swift; settings allow build/test for Maven, Gradle, Flutter, Dart, Swift, Ruby, Elixir, Deno.
