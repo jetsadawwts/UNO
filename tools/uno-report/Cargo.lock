@@ -12,6 +12,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "adapters-os"
+version = "0.1.0"
+dependencies = [
+ "app",
+]
+
+[[package]]
 name = "app"
 version = "0.1.0"
 dependencies = [
@@ -146,6 +153,7 @@ name = "uno-report"
 version = "0.1.0"
 dependencies = [
  "adapters-fs",
+ "adapters-os",
  "app",
  "domain",
  "pulldown-cmark",

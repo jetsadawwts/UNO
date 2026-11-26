@@ -20,6 +20,7 @@ use std::thread;
 use std::time::Duration;
 
 use adapters_fs::{manual_stamp, FsStore};
+use adapters_os::{LsofSessions, SystemClock};
 use app::ports::{Clock, SessionProbe};
 use domain::{clip, is_open, Event, EventKind, Project, Task, DONE, DROPPED};
 
@@ -44,54 +45,6 @@ fn event_text(k: &EventKind) -> (String, String) {
 fn ev_t(e: &Event) -> String {
     let (en, th) = event_text(&e.kind);
     t(&en, &th)
-}
-
-/// Claude Code sessions open right now, by project folder name (macOS `lsof` + `ps`).
-/// Counts only top-level `claude` processes: a process whose parent is also `claude`
-/// (a worker or tool process of the same session) is not a separate session.
-/// Returns None when `lsof` is not available.
-fn open_sessions() -> Option<BTreeMap<String, usize>> {
-    if let Ok(v) = env::var("UNO_REPORT_FAKE_SESSIONS") {
-        return fake_sessions(&v);
-    }
-    let out = Command::new("lsof").args(["-a", "-c", "claude", "-d", "cwd", "-Fpn"]).output().ok()?;
-    // pid → project
-    let mut by_pid: Vec<(String, String)> = Vec::new();
-    let mut pid = String::new();
-    for line in String::from_utf8_lossy(&out.stdout).lines() {
-        if let Some(p) = line.strip_prefix('p') {
-            pid = p.to_string();
-        } else if let Some(path) = line.strip_prefix('n') {
-            if let Some(rest) = path.split("/UNO/projects/").nth(1) {
-                let name = rest.split('/').next().unwrap_or("").to_string();
-                if !name.is_empty() {
-                    by_pid.push((pid.clone(), name));
-                }
-            }
-        }
-    }
-    // pid → parent's command name
-    let ps = Command::new("ps").args(["-axo", "pid=,ppid=,comm="]).output().ok();
-    let mut comm: BTreeMap<String, String> = BTreeMap::new();
-    let mut parent: BTreeMap<String, String> = BTreeMap::new();
-    if let Some(ps) = ps {
-        for line in String::from_utf8_lossy(&ps.stdout).lines() {
-            let mut it = line.split_whitespace();
-            if let (Some(p), Some(pp)) = (it.next(), it.next()) {
-                let c: String = it.collect::<Vec<_>>().join(" ");
-                comm.insert(p.to_string(), c.rsplit('/').next().unwrap_or("").to_string());
-                parent.insert(p.to_string(), pp.to_string());
-            }
-        }
-    }
-    let mut m = BTreeMap::new();
-    for (p, name) in by_pid {
-        let child_of_claude = parent.get(&p).and_then(|pp| comm.get(pp)).map(|c| c.starts_with("claude")).unwrap_or(false);
-        if !child_of_claude {
-            *m.entry(name).or_default() += 1;
-        }
-    }
-    Some(m)
 }
 
 /// Test seam: `UNO_REPORT_FAKE_SESSIONS="alpha=1,beta=0"` → fixed counts, `"none"` → lsof unavailable.
@@ -827,12 +780,19 @@ if(S('start','last')==='last'){try{var p=localStorage.getItem('uno-proj');if(p)s
  try{var v=localStorage.getItem('uno-view');if(v)document.querySelector('nav button[data-v="'+v+'"]').click()}catch(e){}}
 "#;
 
+/// Test seams: `UNO_REPORT_FAKE_NOW` fixes the clock, `UNO_REPORT_FAKE_SESSIONS` the session counts.
 fn now() -> String {
     if let Ok(v) = env::var("UNO_REPORT_FAKE_NOW") {
         return v;
     }
-    Command::new("date").arg("+%Y-%m-%d %H:%M").output().ok()
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).unwrap_or_default()
+    SystemClock.now()
+}
+
+fn open_sessions() -> Option<BTreeMap<String, usize>> {
+    if let Ok(v) = env::var("UNO_REPORT_FAKE_SESSIONS") {
+        return fake_sessions(&v);
+    }
+    LsofSessions.open_sessions()
 }
 
 struct LegacySessions;
