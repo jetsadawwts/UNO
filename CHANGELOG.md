@@ -2,6 +2,10 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.13 — 2026-11-26
+- **`uno-report` is now a Ports & Adapters workspace (R1).** `tools/uno-report` splits into `domain` (counting rules), `app` (ports and use cases), `adapters-fs`, `adapters-os`, `adapters-web`, `adapters-file`, and the root CLI; Cargo enforces that the core does no I/O and adapters do not depend on each other (`tools/uno-report/ARCHITECTURE.md`). Command line parsing uses `clap`. **No visible change:** a golden test proves the page and `--help` are byte-identical to v0.5.12; 57 tests in total. Prepares R2 (real-time updates) and R3 (settings, config, logging).
+- **After updating:** `launchctl unload ~/Library/LaunchAgents/com.uno.report.plist` → `cargo install --path ~/UNO/uno/tools/uno-report --force` → `launchctl load ~/Library/LaunchAgents/com.uno.report.plist`. Same flags, same plist.
+
 ## v0.5.12 — 2026-11-26
 - **`uno-report` live dashboard:** `--serve [--port N]` runs it on http://localhost:8765 (127.0.0.1 only, Host header checked, GET only) and updates the page in place within seconds when `~/UNO/data` or open sessions change; `--watch N` regenerates the file every N minutes. `tools/uno-report/launchd/com.uno.report.plist` starts `--serve` at login (log: `/tmp/uno-report.log`).
 - **Dashboard:** settings menu (language, theme and day/night hours, page reload, team-activity window, start page, live interval; stored in the browser), team activity per project (open Claude Code sessions, latest audit event), six overview charts, per-project views, EN/TH manual (`manual.md`, `manual.th.md`).

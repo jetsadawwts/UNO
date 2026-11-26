@@ -19,6 +19,7 @@ adapters-fs = { path = "crates/adapters-fs" }
 adapters-os = { path = "crates/adapters-os" }
 adapters-web = { path = "crates/adapters-web" }
 adapters-file = { path = "crates/adapters-file" }
+clap = { version = "4", features = ["derive"] }
 
 [profile.release]
 strip = true

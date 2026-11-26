@@ -85,7 +85,7 @@ pub(crate) fn activity_panel(projects: &[&Project], sessions_known: bool) -> Str
              <div class=\"lc-last\">{}</div><div class=\"lc-meta\"><span class=\"ago\" data-time=\"{}\"></span> · {}</div></div>",
             esc(&p.last), esc(&p.name),
             t("Working", "กำลังทำงาน"), t("Session open, idle", "เปิด session อยู่ ยังไม่มีกิจกรรม"), t("Not running", "ไม่ได้ทำงาน"),
-            last.map(|e| ev_t(e)).unwrap_or_else(|| t("No activity yet", "ยังไม่มีกิจกรรม")),
+            last.map(ev_t).unwrap_or_else(|| t("No activity yet", "ยังไม่มีกิจกรรม")),
             esc(&p.last),
             t(&format!("{sess} open session(s)"), &format!("เปิดอยู่ {sess} session")));
     }
