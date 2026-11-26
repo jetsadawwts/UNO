@@ -2,6 +2,8 @@
 mod dashboard;
 pub mod ports;
 mod signature;
+mod watch;
 
 pub use dashboard::{build_dashboard, Dashboard};
 pub use signature::signature;
+pub use watch::Watch;

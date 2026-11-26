@@ -38,3 +38,8 @@ pub trait Clock {
     /// Local time as `YYYY-MM-DD HH:MM`.
     fn now(&self) -> String;
 }
+
+pub trait ChangeFeed {
+    /// Block up to `timeout`; true when watched files changed (already debounced).
+    fn wait(&self, timeout: std::time::Duration) -> bool;
+}
