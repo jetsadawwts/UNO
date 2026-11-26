@@ -20,22 +20,24 @@ use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
+use app::ports::{Clock, ProjectFiles, ProjectStore, SessionProbe};
 use domain::{clip, is_open, AuditRecord, Event, EventKind, Project, Task, DONE, DROPPED};
 
 // ---------------------------------------------------------------- data
 
-fn read_audit(p: &mut Project, path: &Path) {
-    let Ok(text) = fs::read_to_string(path) else { return };
-    for line in text.lines() {
-        let Ok(v) = serde_json::from_str::<Value>(line) else { continue };
-        let s = |k: &str| v.get(k).and_then(Value::as_str).unwrap_or("").to_string();
-        p.apply(&AuditRecord {
-            time: s("time"), event: s("event"), action: s("action"), backend: s("backend"), task: s("task"),
-            rule: s("rule"), zone: s("zone"), tool: s("tool"), command: s("command"), file: s("file"),
-            name: s("name"), description: s("description"),
-        });
-    }
-    p.finish();
+fn parse_audit(path: &Path) -> Vec<AuditRecord> {
+    let Ok(text) = fs::read_to_string(path) else { return Vec::new() };
+    text.lines()
+        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+        .map(|v| {
+            let s = |k: &str| v.get(k).and_then(Value::as_str).unwrap_or("").to_string();
+            AuditRecord {
+                time: s("time"), event: s("event"), action: s("action"), backend: s("backend"), task: s("task"),
+                rule: s("rule"), zone: s("zone"), tool: s("tool"), command: s("command"), file: s("file"),
+                name: s("name"), description: s("description"),
+            }
+        })
+        .collect()
 }
 
 /// English and Thai text for an activity-feed entry.
@@ -64,8 +66,9 @@ fn cells(line: &str) -> Vec<String> {
     t.split('|').map(|c| c.trim().to_string()).collect()
 }
 
-fn read_tasks(p: &mut Project, path: &Path) {
-    let Ok(text) = fs::read_to_string(path) else { return };
+fn parse_tasks(path: &Path) -> Vec<Task> {
+    let mut tasks: Vec<Task> = Vec::new();
+    let Ok(text) = fs::read_to_string(path) else { return tasks };
     let (mut id_col, mut task_col, mut status_col) = (None, None, None);
     for line in text.lines() {
         let l = line.trim();
@@ -84,14 +87,15 @@ fn read_tasks(p: &mut Project, path: &Path) {
         if !id.starts_with('T') || id.len() < 2 || !id[1..].chars().all(|ch| ch.is_ascii_digit()) {
             continue;
         }
-        if p.tasks.iter().any(|t| t.id == id) {
+        if tasks.iter().any(|t| t.id == id) {
             continue;
         }
         let status = c.get(s).map(|x| x.to_lowercase()).unwrap_or_default();
         let status = status.trim_matches(|ch: char| ch == '*' || ch == '`').split_whitespace().next().unwrap_or("").to_string();
         let title = task_col.and_then(|t| c.get(t)).cloned().unwrap_or_default();
-        p.tasks.push(Task { id, title, status });
+        tasks.push(Task { id, title, status });
     }
+    tasks
 }
 
 /// Claude Code sessions open right now, by project folder name (macOS `lsof` + `ps`).
@@ -883,29 +887,58 @@ fn now() -> String {
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).unwrap_or_default()
 }
 
-fn render(data: &Path, manual_path: &Path, watch: Option<u64>, live: bool) -> Result<(String, usize), String> {
-    let entries = fs::read_dir(data).map_err(|e| format!("cannot read {}: {e}", data.display()))?;
-    let sessions = open_sessions();
-    let mut dirs: Vec<PathBuf> = entries.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect();
-    dirs.sort();
-    let mut projects = Vec::new();
-    for dir in dirs {
-        let name = dir.file_name().unwrap().to_string_lossy().to_string();
-        if name.starts_with('_') || name.starts_with('.') {
-            continue;
+struct LegacyStore<'a>(&'a Path);
+impl ProjectStore for LegacyStore<'_> {
+    fn projects(&self) -> Result<Vec<ProjectFiles>, String> {
+        let data = self.0;
+        let entries = fs::read_dir(data).map_err(|e| format!("cannot read {}: {e}", data.display()))?;
+        let mut dirs: Vec<PathBuf> = entries.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect();
+        dirs.sort();
+        let mut out = Vec::new();
+        for dir in dirs {
+            let name = dir.file_name().unwrap().to_string_lossy().to_string();
+            if name.starts_with('_') || name.starts_with('.') {
+                continue;
+            }
+            let (audit, tasks) = (dir.join("audit.log"), dir.join("tasks.md"));
+            if !audit.exists() && !tasks.exists() {
+                continue;
+            }
+            out.push(ProjectFiles { name, audit: parse_audit(&audit), tasks: parse_tasks(&tasks) });
         }
-        let (audit, tasks) = (dir.join("audit.log"), dir.join("tasks.md"));
-        if !audit.exists() && !tasks.exists() {
-            continue;
-        }
-        let mut p = Project { name, ..Default::default() };
-        read_audit(&mut p, &audit);
-        read_tasks(&mut p, &tasks);
-        p.sessions = sessions.as_ref().and_then(|m| m.get(&p.name)).copied().unwrap_or(0);
-        projects.push(p);
+        Ok(out)
     }
+    fn stamp(&self) -> String {
+        let mut sig = String::new();
+        if let Ok(entries) = fs::read_dir(self.0) {
+            let mut dirs: Vec<PathBuf> = entries.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect();
+            dirs.sort();
+            for d in dirs {
+                sig += &file_stamp(&d.join("audit.log"));
+                sig += &file_stamp(&d.join("tasks.md"));
+            }
+        }
+        sig
+    }
+}
+struct LegacySessions;
+impl SessionProbe for LegacySessions {
+    fn open_sessions(&self) -> Option<BTreeMap<String, usize>> { open_sessions() }
+}
+struct LegacyClock;
+impl Clock for LegacyClock {
+    fn now(&self) -> String { now() }
+}
+
+fn file_stamp(p: &Path) -> String {
+    fs::metadata(p).ok().map(|m| format!("{}:{:?};", m.len(), m.modified().ok())).unwrap_or_default()
+}
+
+fn render(data: &Path, manual_path: &Path, watch: Option<u64>, live: bool) -> Result<(String, usize), String> {
+    let d = app::build_dashboard(&LegacyStore(data), &LegacySessions, &LegacyClock)?;
+    let (projects, sessions_known) = (d.projects, d.sessions_known);
     let n = projects.len();
-    let stamp = now();
+    let stamp = d.generated_at;
     let header = format!(
         "<header><h1>{}UNO</h1><nav><button class=\"on\" data-v=\"dash\">{}{}</button><button data-v=\"manual\">{}{}</button></nav>\
          <div class=\"hright\"><span id=\"liveflag\" class=\"pill-btn\" hidden title=\"uno-report --serve\"><i class=\"ld\"></i><span class=\"l-on\">{}</span><span class=\"l-off\">{}</span></span><span id=\"reloadflag\" class=\"pill-btn\" hidden>{}{}</span>\
@@ -927,7 +960,7 @@ fn render(data: &Path, manual_path: &Path, watch: Option<u64>, live: bool) -> Re
          <title>UNO — Dashboard and Manual</title><script>{}{HEAD_JS}</script><style>{CSS}</style></head><body>{header}\
          <main><div id=\"dash\" class=\"view on\">{}</div><div id=\"manual\" class=\"view\">{}</div></main>{}<script>{JS}</script></body></html>",
         if live { "window.UNO_LIVE=true;" } else { "" },
-        dashboard(&projects, sessions.is_some()), manual(manual_path), settings_dialog(watch));
+        dashboard(&projects, sessions_known), manual(manual_path), settings_dialog(watch));
     Ok((page, n))
 }
 
@@ -943,28 +976,8 @@ fn build(data: &Path, out: &Path, manual_path: &Path, watch: Option<u64>) -> Res
 /// Cheap fingerprint of everything the page shows: sizes and times of the data files and
 /// manuals, plus the open sessions. The page polls it and reloads its content when it changes.
 fn signature(data: &Path, manual_path: &Path) -> String {
-    let mut sig = String::new();
-    let stamp = |p: &Path| fs::metadata(p).ok()
-        .map(|m| format!("{}:{:?};", m.len(), m.modified().ok()))
-        .unwrap_or_default();
-    sig += &stamp(manual_path);
-    sig += &stamp(&manual_path.with_file_name("manual.th.md"));
-    if let Ok(entries) = fs::read_dir(data) {
-        let mut dirs: Vec<PathBuf> = entries.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect();
-        dirs.sort();
-        for d in dirs {
-            sig += &stamp(&d.join("audit.log"));
-            sig += &stamp(&d.join("tasks.md"));
-        }
-    }
-    if let Some(s) = open_sessions() {
-        sig += &format!("{s:?}");
-    }
-    let mut h: u64 = 1469598103934665603;
-    for b in sig.bytes() {
-        h = (h ^ b as u64).wrapping_mul(0x0100_0000_01b3);
-    }
-    format!("{h:016x}")
+    let manual = file_stamp(manual_path) + &file_stamp(&manual_path.with_file_name("manual.th.md"));
+    app::signature(&LegacyStore(data), &manual, &LegacySessions)
 }
 
 fn respond(stream: &mut std::net::TcpStream, status: &str, ctype: &str, body: &[u8]) {
