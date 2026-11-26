@@ -1,0 +1,11 @@
+[package]
+name = "adapters-fs"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+description = "uno-report adapter: reads ~/UNO/data (audit.log, tasks.md, manuals)."
+
+[dependencies]
+domain = { path = "../domain" }
+app = { path = "../app" }
+serde_json = "1"

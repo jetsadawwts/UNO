@@ -3,6 +3,15 @@
 version = 4
 
 [[package]]
+name = "adapters-fs"
+version = "0.1.0"
+dependencies = [
+ "app",
+ "domain",
+ "serde_json",
+]
+
+[[package]]
 name = "app"
 version = "0.1.0"
 dependencies = [
@@ -136,10 +145,10 @@ checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
 name = "uno-report"
 version = "0.1.0"
 dependencies = [
+ "adapters-fs",
  "app",
  "domain",
  "pulldown-cmark",
- "serde_json",
 ]
 
 [[package]]

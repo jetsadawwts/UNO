@@ -11,7 +11,6 @@
 //! Usage: uno-report [--data DIR] [--out FILE] [--manual FILE] [--open] [--watch MINUTES] [--serve [--port N]]
 
 use pulldown_cmark::{html, Options, Parser};
-use serde_json::Value;
 use std::collections::BTreeMap;
 use std::env;
 use std::fs;
@@ -20,25 +19,11 @@ use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
-use app::ports::{Clock, ProjectFiles, ProjectStore, SessionProbe};
-use domain::{clip, is_open, AuditRecord, Event, EventKind, Project, Task, DONE, DROPPED};
+use adapters_fs::{manual_stamp, FsStore};
+use app::ports::{Clock, SessionProbe};
+use domain::{clip, is_open, Event, EventKind, Project, Task, DONE, DROPPED};
 
 // ---------------------------------------------------------------- data
-
-fn parse_audit(path: &Path) -> Vec<AuditRecord> {
-    let Ok(text) = fs::read_to_string(path) else { return Vec::new() };
-    text.lines()
-        .filter_map(|line| serde_json::from_str::<Value>(line).ok())
-        .map(|v| {
-            let s = |k: &str| v.get(k).and_then(Value::as_str).unwrap_or("").to_string();
-            AuditRecord {
-                time: s("time"), event: s("event"), action: s("action"), backend: s("backend"), task: s("task"),
-                rule: s("rule"), zone: s("zone"), tool: s("tool"), command: s("command"), file: s("file"),
-                name: s("name"), description: s("description"),
-            }
-        })
-        .collect()
-}
 
 /// English and Thai text for an activity-feed entry.
 fn event_text(k: &EventKind) -> (String, String) {
@@ -59,43 +44,6 @@ fn event_text(k: &EventKind) -> (String, String) {
 fn ev_t(e: &Event) -> String {
     let (en, th) = event_text(&e.kind);
     t(&en, &th)
-}
-
-fn cells(line: &str) -> Vec<String> {
-    let t = line.trim().trim_start_matches('|').trim_end_matches('|');
-    t.split('|').map(|c| c.trim().to_string()).collect()
-}
-
-fn parse_tasks(path: &Path) -> Vec<Task> {
-    let mut tasks: Vec<Task> = Vec::new();
-    let Ok(text) = fs::read_to_string(path) else { return tasks };
-    let (mut id_col, mut task_col, mut status_col) = (None, None, None);
-    for line in text.lines() {
-        let l = line.trim();
-        if !l.starts_with('|') {
-            continue;
-        }
-        let c = cells(l);
-        if c.first().map(|x| x == "ID").unwrap_or(false) {
-            id_col = Some(0);
-            task_col = c.iter().position(|x| x == "Task");
-            status_col = c.iter().position(|x| x == "Status");
-            continue;
-        }
-        let (Some(i), Some(s)) = (id_col, status_col) else { continue };
-        let id = c.get(i).cloned().unwrap_or_default();
-        if !id.starts_with('T') || id.len() < 2 || !id[1..].chars().all(|ch| ch.is_ascii_digit()) {
-            continue;
-        }
-        if tasks.iter().any(|t| t.id == id) {
-            continue;
-        }
-        let status = c.get(s).map(|x| x.to_lowercase()).unwrap_or_default();
-        let status = status.trim_matches(|ch: char| ch == '*' || ch == '`').split_whitespace().next().unwrap_or("").to_string();
-        let title = task_col.and_then(|t| c.get(t)).cloned().unwrap_or_default();
-        tasks.push(Task { id, title, status });
-    }
-    tasks
 }
 
 /// Claude Code sessions open right now, by project folder name (macOS `lsof` + `ps`).
@@ -887,40 +835,6 @@ fn now() -> String {
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).unwrap_or_default()
 }
 
-struct LegacyStore<'a>(&'a Path);
-impl ProjectStore for LegacyStore<'_> {
-    fn projects(&self) -> Result<Vec<ProjectFiles>, String> {
-        let data = self.0;
-        let entries = fs::read_dir(data).map_err(|e| format!("cannot read {}: {e}", data.display()))?;
-        let mut dirs: Vec<PathBuf> = entries.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect();
-        dirs.sort();
-        let mut out = Vec::new();
-        for dir in dirs {
-            let name = dir.file_name().unwrap().to_string_lossy().to_string();
-            if name.starts_with('_') || name.starts_with('.') {
-                continue;
-            }
-            let (audit, tasks) = (dir.join("audit.log"), dir.join("tasks.md"));
-            if !audit.exists() && !tasks.exists() {
-                continue;
-            }
-            out.push(ProjectFiles { name, audit: parse_audit(&audit), tasks: parse_tasks(&tasks) });
-        }
-        Ok(out)
-    }
-    fn stamp(&self) -> String {
-        let mut sig = String::new();
-        if let Ok(entries) = fs::read_dir(self.0) {
-            let mut dirs: Vec<PathBuf> = entries.flatten().map(|e| e.path()).filter(|p| p.is_dir()).collect();
-            dirs.sort();
-            for d in dirs {
-                sig += &file_stamp(&d.join("audit.log"));
-                sig += &file_stamp(&d.join("tasks.md"));
-            }
-        }
-        sig
-    }
-}
 struct LegacySessions;
 impl SessionProbe for LegacySessions {
     fn open_sessions(&self) -> Option<BTreeMap<String, usize>> { open_sessions() }
@@ -930,12 +844,8 @@ impl Clock for LegacyClock {
     fn now(&self) -> String { now() }
 }
 
-fn file_stamp(p: &Path) -> String {
-    fs::metadata(p).ok().map(|m| format!("{}:{:?};", m.len(), m.modified().ok())).unwrap_or_default()
-}
-
 fn render(data: &Path, manual_path: &Path, watch: Option<u64>, live: bool) -> Result<(String, usize), String> {
-    let d = app::build_dashboard(&LegacyStore(data), &LegacySessions, &LegacyClock)?;
+    let d = app::build_dashboard(&FsStore { root: data.to_path_buf() }, &LegacySessions, &LegacyClock)?;
     let (projects, sessions_known) = (d.projects, d.sessions_known);
     let n = projects.len();
     let stamp = d.generated_at;
@@ -976,8 +886,7 @@ fn build(data: &Path, out: &Path, manual_path: &Path, watch: Option<u64>) -> Res
 /// Cheap fingerprint of everything the page shows: sizes and times of the data files and
 /// manuals, plus the open sessions. The page polls it and reloads its content when it changes.
 fn signature(data: &Path, manual_path: &Path) -> String {
-    let manual = file_stamp(manual_path) + &file_stamp(&manual_path.with_file_name("manual.th.md"));
-    app::signature(&LegacyStore(data), &manual, &LegacySessions)
+    app::signature(&FsStore { root: data.to_path_buf() }, &manual_stamp(manual_path), &LegacySessions)
 }
 
 fn respond(stream: &mut std::net::TcpStream, status: &str, ctype: &str, body: &[u8]) {
