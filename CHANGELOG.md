@@ -2,6 +2,11 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.12 — 2026-11-26
+- **`uno-report` live dashboard:** `--serve [--port N]` runs it on http://localhost:8765 (127.0.0.1 only, Host header checked, GET only) and updates the page in place within seconds when `~/UNO/data` or open sessions change; `--watch N` regenerates the file every N minutes. `tools/uno-report/launchd/com.uno.report.plist` starts `--serve` at login (log: `/tmp/uno-report.log`).
+- **Dashboard:** settings menu (language, theme and day/night hours, page reload, team-activity window, start page, live interval; stored in the browser), team activity per project (open Claude Code sessions, latest audit event), six overview charts, per-project views, EN/TH manual (`manual.md`, `manual.th.md`).
+- **After updating:** `launchctl unload ~/Library/LaunchAgents/com.uno.report.plist` (if loaded) → `cargo install --path ~/UNO/uno/tools/uno-report --force` → copy the plist to `~/Library/LaunchAgents/` and `launchctl load` it.
+
 ## v0.5.11 — 2026-11-26
 - **`uno-report` (Rust, `tools/uno-report`):** builds one local HTML file with a Dashboard and the manual. Reads every project in `~/UNO/data` (`audit.log`, `tasks.md` Status column) and `~/UNO/data/manual.md`; writes `~/UNO/data/uno-report.html`. Dashboard: tasks done/open/dropped, plan approvals (and how many by a local model), Epsilon reviews, guard blocks by rule, owner prompts, agents used, activity per day, open tasks. No network, no external scripts; light and dark. Install: `cargo install --path ~/UNO/uno/tools/uno-report`, run: `uno-report --open`.
 
