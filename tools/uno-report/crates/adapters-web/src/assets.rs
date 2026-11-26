@@ -127,23 +127,44 @@ document.getElementById('s-reset').onclick=()=>{['lang','theme','reload','window
 var rt=null;function armReload(){if(rt)clearTimeout(rt);var m=+S('reload','0');var b=document.getElementById('reloadflag');
  b.hidden=!m;if(m){b.querySelectorAll('.n').forEach(x=>x.textContent=m);rt=setTimeout(()=>location.reload(),m*60000)}}
 setLang(S('lang','en'));ages();armReload();
-// live mode (uno-report --serve): poll /version and swap in fresh content when anything changed
-if(window.UNO_LIVE){var lf=document.getElementById('liveflag');lf.hidden=false;var sig=null,busy=false;
- function setLive(ok){lf.classList.toggle('off',!ok)}
- async function refresh(){var cur=document.getElementById('psel').value;
-  var opened=[...document.querySelectorAll('#dash details')].map(d=>d.open);
-  var h=await (await fetch('/',{cache:'no-store'})).text();var doc=new DOMParser().parseFromString(h,'text/html');
-  ['dash','manual'].forEach(id=>{var n=doc.getElementById(id);if(n)document.getElementById(id).innerHTML=n.innerHTML});
-  var m=doc.querySelector('header .meta');if(m)document.querySelector('header .meta').innerHTML=m.innerHTML;
-  bindDyn();setLang(D.dataset.lang);showP(cur,true);
-  document.querySelectorAll('#dash details').forEach((d,i)=>{if(opened[i])d.open=true});ages();
-  lf.classList.add('flash');setTimeout(()=>lf.classList.remove('flash'),900)}
- async function tick(){if(busy)return;busy=true;
-  try{var v=await (await fetch('/version',{cache:'no-store'})).text();setLive(true);
-   if(sig!==null&&v!==sig)await refresh();sig=v}catch(e){setLive(false)}busy=false}
- var li=null;window.unoLiveArm=function(){if(li)clearInterval(li);li=setInterval(tick,(+S('live','3'))*1000)};tick();window.unoLiveArm()}
-
 if(S('start','last')==='last'){try{var p=localStorage.getItem('uno-proj');if(p)showP(p)}catch(e){}
  try{var v=localStorage.getItem('uno-view');if(v)document.querySelector('nav button[data-v="'+v+'"]').click()}catch(e){}}
 "#;
 
+
+/// Live page only (`uno-report --serve`): pane updates over `/ws`; polling `/version` while the
+/// socket is down, reconnecting after 1, 2, 4 … 30 s. Runs after `JS` and uses its functions.
+pub(crate) const LIVE_JS: &str = r#"
+(function(){var lf=document.getElementById('liveflag');lf.hidden=false;
+var st=document.createElement('style');st.textContent='#liveflag .l-poll{display:none}#liveflag.poll .l-on{display:none}#liveflag.poll .l-poll{display:inline}#liveflag.poll .ld{background:var(--c4);box-shadow:none}';document.head.appendChild(st);
+var lp=document.createElement('span');lp.className='l-poll';lp.innerHTML='<span class="l-en">Polling</span><span class="l-th">ตรวจเป็นระยะ</span>';lf.appendChild(lp);
+function setState(s){lf.classList.toggle('poll',s==='poll');lf.classList.toggle('off',s==='off');lf.dataset.state=s}
+function flash(){lf.classList.add('flash');setTimeout(()=>lf.classList.remove('flash'),900)}
+function keep(){return {cur:document.getElementById('psel').value,opened:[...document.querySelectorAll('#dash details')].map(d=>d.open)}}
+function restore(k){bindDyn();setLang(D.dataset.lang);showP(k.cur,true);
+ document.querySelectorAll('#dash details').forEach((d,i)=>{if(k.opened[i])d.open=true});ages()}
+async function refresh(){var k=keep();
+ var h=await (await fetch('/',{cache:'no-store'})).text();var doc=new DOMParser().parseFromString(h,'text/html');
+ ['dash','manual'].forEach(id=>{var n=doc.getElementById(id);if(n)document.getElementById(id).innerHTML=n.innerHTML});
+ var m=doc.querySelector('header .meta');if(m)document.querySelector('header .meta').innerHTML=m.innerHTML;
+ restore(k);flash()}
+var first=true;
+function apply(m){if(m.reload){refresh();return}
+ var ids=Object.keys(m.panes||{});if(!ids.length)return;var k=keep();
+ ids.forEach(id=>{var el=document.getElementById(id);if(el)el.innerHTML=m.panes[id]});
+ if(m.meta!=null)document.querySelector('header .meta').innerHTML=m.meta;
+ restore(k);if(!first)flash();window.unoSwaps=(window.unoSwaps||0)+1}
+var sig=null,ws=null,backoff=1,poll=null,busy=false;
+async function tick(){if(busy)return;busy=true;
+ try{var v=await (await fetch('/version',{cache:'no-store'})).text();setState(ws&&ws.readyState===1?'live':'poll');
+  if(sig!==null&&v!==sig)await refresh();sig=v}catch(e){setState('off')}busy=false}
+function startPoll(){if(poll)return;tick();poll=setInterval(tick,(+S('live','3'))*1000)}
+function stopPoll(){if(poll){clearInterval(poll);poll=null}}
+window.unoLiveArm=function(){if(poll){stopPoll();startPoll()}};
+function retry(){setTimeout(connect,backoff*1000);backoff=Math.min(backoff*2,30)}
+function connect(){try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws')}catch(e){ws=null;startPoll();retry();return}
+ ws.onopen=function(){backoff=1;stopPoll();setState('live')};
+ ws.onmessage=function(e){try{var m=JSON.parse(e.data);apply(m);first=false;sig=m.sig}catch(x){}};
+ ws.onclose=function(){ws=null;if(lf.dataset.state!=='off')setState('poll');startPoll();retry()}}
+setState('poll');connect()})();
+"#;

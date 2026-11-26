@@ -140,22 +140,6 @@ document.getElementById('s-reset').onclick=()=>{['lang','theme','reload','window
 var rt=null;function armReload(){if(rt)clearTimeout(rt);var m=+S('reload','0');var b=document.getElementById('reloadflag');
  b.hidden=!m;if(m){b.querySelectorAll('.n').forEach(x=>x.textContent=m);rt=setTimeout(()=>location.reload(),m*60000)}}
 setLang(S('lang','en'));ages();armReload();
-// live mode (uno-report --serve): poll /version and swap in fresh content when anything changed
-if(window.UNO_LIVE){var lf=document.getElementById('liveflag');lf.hidden=false;var sig=null,busy=false;
- function setLive(ok){lf.classList.toggle('off',!ok)}
- async function refresh(){var cur=document.getElementById('psel').value;
-  var opened=[...document.querySelectorAll('#dash details')].map(d=>d.open);
-  var h=await (await fetch('/',{cache:'no-store'})).text();var doc=new DOMParser().parseFromString(h,'text/html');
-  ['dash','manual'].forEach(id=>{var n=doc.getElementById(id);if(n)document.getElementById(id).innerHTML=n.innerHTML});
-  var m=doc.querySelector('header .meta');if(m)document.querySelector('header .meta').innerHTML=m.innerHTML;
-  bindDyn();setLang(D.dataset.lang);showP(cur,true);
-  document.querySelectorAll('#dash details').forEach((d,i)=>{if(opened[i])d.open=true});ages();
-  lf.classList.add('flash');setTimeout(()=>lf.classList.remove('flash'),900)}
- async function tick(){if(busy)return;busy=true;
-  try{var v=await (await fetch('/version',{cache:'no-store'})).text();setLive(true);
-   if(sig!==null&&v!==sig)await refresh();sig=v}catch(e){setLive(false)}busy=false}
- var li=null;window.unoLiveArm=function(){if(li)clearInterval(li);li=setInterval(tick,(+S('live','3'))*1000)};tick();window.unoLiveArm()}
-
 if(S('start','last')==='last'){try{var p=localStorage.getItem('uno-proj');if(p)showP(p)}catch(e){}
  try{var v=localStorage.getItem('uno-view');if(v)document.querySelector('nav button[data-v="'+v+'"]').click()}catch(e){}}
 </script></body></html>

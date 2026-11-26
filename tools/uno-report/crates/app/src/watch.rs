@@ -16,7 +16,7 @@ impl Watch {
 
     /// One round: wait on the feed (up to `tick`), recompute the signature, and return it only
     /// when it differs from the last one returned. The first call always returns it.
-    pub fn step(&mut self, feed: &impl ChangeFeed, store: &impl ProjectStore, manual_stamp: &str,
+    pub fn step(&mut self, feed: &(impl ChangeFeed + ?Sized), store: &impl ProjectStore, manual_stamp: &str,
                 sessions: &impl SessionProbe, tick: Duration) -> Option<String> {
         feed.wait(tick);
         let sig = signature(store, manual_stamp, sessions);

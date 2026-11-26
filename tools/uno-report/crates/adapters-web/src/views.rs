@@ -280,9 +280,10 @@ pub fn render_page(d: &app::Dashboard, m: &app::ports::ManualText, data_label: &
     let page = format!(
         "<!DOCTYPE html><html lang=\"en\" data-lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\
          <title>UNO — Dashboard and Manual</title><script>{}{HEAD_JS}</script><style>{CSS}</style></head><body>{header}\
-         <main><div id=\"dash\" class=\"view on\">{}</div><div id=\"manual\" class=\"view\">{}</div></main>{}<script>{JS}</script></body></html>",
+         <main><div id=\"dash\" class=\"view on\">{}</div><div id=\"manual\" class=\"view\">{}</div></main>{}<script>{JS}</script>{}</body></html>",
         if matches!(mode, PageMode::Live) { "window.UNO_LIVE=true;" } else { "" },
-        dashboard(&d.projects, d.sessions_known), manual_html(m), settings_dialog(watch));
+        dashboard(&d.projects, d.sessions_known), manual_html(m), settings_dialog(watch),
+        if matches!(mode, PageMode::Live) { format!("<script>{LIVE_JS}</script>") } else { String::new() });
     page
 }
 

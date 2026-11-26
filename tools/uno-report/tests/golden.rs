@@ -31,3 +31,10 @@ fn golden_help_matches() {
     let o = run(&["--help"]);
     assert_eq!(String::from_utf8_lossy(&o.stdout), include_str!("golden/help.txt"));
 }
+
+#[test]
+fn file_page_has_no_live_script() {
+    let page = include_str!("golden/report.html");
+    assert!(!page.contains("new WebSocket"));
+    assert!(!page.contains("fetch('/version'"), "polling belongs to the live page only");
+}

@@ -18,10 +18,10 @@ use std::time::Duration;
 use clap::Parser;
 
 use adapters_file::write_atomic;
-use adapters_fs::{manual_stamp, FsManual, FsStore};
+use adapters_fs::{manual_stamp, FsChangeFeed, FsManual, FsStore};
 use adapters_os::{LsofSessions, SystemClock};
 use adapters_web::{render_page, PageMode, Server};
-use app::ports::{Clock, ManualSource, SessionProbe};
+use app::ports::{ChangeFeed, Clock, ManualSource, SessionProbe};
 
 /// Test seam: `UNO_REPORT_FAKE_SESSIONS="alpha=1,beta=0"` → fixed counts, `"none"` → lsof unavailable.
 fn fake_sessions(v: &str) -> Option<BTreeMap<String, usize>> {
@@ -54,6 +54,38 @@ fn build(data: &Path, out: &Path, manual_path: &Path, watch: Option<u64>) -> Res
     let m = FsManual { en_path: manual_path.to_path_buf() }.manual();
     write_atomic(out, &render_page(&d, &m, &data.display().to_string(), &PageMode::File { watch }))?;
     Ok(d.projects.len())
+}
+
+/// Without file events (the watcher could not start) the page still updates every `TICK`.
+struct TickOnly;
+impl ChangeFeed for TickOnly {
+    fn wait(&self, timeout: Duration) -> bool {
+        thread::sleep(timeout);
+        false
+    }
+}
+
+/// Session counts have no events, so the watcher also re-checks every `TICK`.
+const TICK: Duration = Duration::from_secs(5);
+
+/// Background thread: file changes (or every `TICK`) → new signature → every live socket.
+fn spawn_watcher(data: PathBuf, manual_path: PathBuf, tx: tokio::sync::watch::Sender<String>) {
+    thread::spawn(move || {
+        let store = FsStore { root: data.clone() };
+        let feed: Box<dyn ChangeFeed> = match FsChangeFeed::new(&data, &manual_path) {
+            Ok(f) => Box::new(f),
+            Err(e) => {
+                eprintln!("uno-report: {e}; checking every {} s instead", TICK.as_secs());
+                Box::new(TickOnly)
+            }
+        };
+        let mut watch = app::Watch::new();
+        loop {
+            if let Some(sig) = watch.step(feed.as_ref(), &store, &manual_stamp(&manual_path), &LocalSessions, TICK) {
+                tx.send_replace(sig);
+            }
+        }
+    });
 }
 
 fn now() -> String {
@@ -129,8 +161,8 @@ fn main() {
     if cli.serve {
         let port: u16 = cli.port.and_then(|v| v.parse().ok()).unwrap_or(8765);
         let stamp_path = manual_path.clone();
-        // Task 3: the socket gets a fixed signature; Task 4 connects the file watcher.
-        let (_changes_tx, changes) = tokio::sync::watch::channel(String::new());
+        let (changes_tx, changes) = tokio::sync::watch::channel(String::new());
+        spawn_watcher(data.clone(), manual_path.clone(), changes_tx);
         let server = Server {
             port,
             store: FsStore { root: data.clone() },

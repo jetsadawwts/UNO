@@ -82,3 +82,13 @@ fn records_without_full_time_do_not_panic() {
     let page = render_page(&d, &Man.manual(), "/d", &PageMode::Live);
     assert!(page.contains("alpha"));
 }
+
+#[test]
+fn live_page_has_socket_script() {
+    let d = app::build_dashboard(&Store, &Sess(None), &Clk).unwrap();
+    let page = render_page(&d, &Man.manual(), "/d", &PageMode::Live);
+    assert!(page.contains("new WebSocket") && page.contains("/ws"));
+    assert!(page.contains("fetch('/version'"), "polling stays as the fallback");
+    let file = render_page(&d, &Man.manual(), "/d", &PageMode::File { watch: None });
+    assert!(!file.contains("new WebSocket"));
+}
