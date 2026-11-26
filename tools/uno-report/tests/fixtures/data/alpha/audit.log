@@ -1,0 +1,12 @@
+{"time":"2026-01-10T09:00:00+07:00","event":"plan-approved","task":"T1","backend":"anthropic"}
+{"time":"2026-01-10T09:05:00+07:00","event":"plan-approved","task":"T2","backend":"ollama"}
+{"time":"2026-01-10T09:10:00+07:00","event":"smoke"}
+{"time":"2026-01-10T09:15:00+07:00","action":"blocked","rule":"secrets","tool":"Bash"}
+{"time":"2026-01-11T10:00:00+07:00","action":"blocked","zone":"forbidden"}
+{"time":"2026-01-11T10:05:00+07:00","action":"asked-owner","command":"brew uninstall example-tool --force --ignore-dependencies now please"}
+{"time":"2026-01-11T10:10:00+07:00","action":"allowed","zone":"review","file":"src/auth/login.ts"}
+{"time":"2026-01-11T10:12:00+07:00","action":"allowed","zone":"normal","file":"src/components/Button.tsx"}
+{"time":"2026-01-11T10:20:00+07:00","action":"called","tool":"Agent","name":"core:security-reviewer","description":"Review T1 diff"}
+{"time":"2026-01-11T10:30:00+07:00","action":"called","tool":"Skill","name":"core:work"}
+not json
+{"event":"smoke"}

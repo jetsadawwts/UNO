@@ -1,0 +1,9 @@
+uno-report [--data DIR] [--out FILE] [--manual FILE] [--open] [--watch MINUTES] [--serve [--port N]]
+
+  default data: ~/UNO/data, out: <data>/uno-report.html
+
+  manual: <data>/manual.md (English) and <data>/manual.th.md (Thai, optional)
+
+  --watch N  regenerate every N minutes until stopped (Ctrl+C)
+
+  --serve    live dashboard at http://localhost:8765 (127.0.0.1 only), updates within seconds

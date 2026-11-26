@@ -212,6 +212,9 @@ fn read_tasks(p: &mut Project, path: &Path) {
 /// (a worker or tool process of the same session) is not a separate session.
 /// Returns None when `lsof` is not available.
 fn open_sessions() -> Option<BTreeMap<String, usize>> {
+    if let Ok(v) = env::var("UNO_REPORT_FAKE_SESSIONS") {
+        return fake_sessions(&v);
+    }
     let out = Command::new("lsof").args(["-a", "-c", "claude", "-d", "cwd", "-Fpn"]).output().ok()?;
     // pid → project
     let mut by_pid: Vec<(String, String)> = Vec::new();
@@ -250,6 +253,14 @@ fn open_sessions() -> Option<BTreeMap<String, usize>> {
         }
     }
     Some(m)
+}
+
+/// Test seam: `UNO_REPORT_FAKE_SESSIONS="alpha=1,beta=0"` → fixed counts, `"none"` → lsof unavailable.
+fn fake_sessions(v: &str) -> Option<BTreeMap<String, usize>> {
+    if v == "none" {
+        return None;
+    }
+    Some(v.split(',').filter_map(|kv| kv.split_once('=')).filter_map(|(k, n)| Some((k.to_string(), n.parse().ok()?))).collect())
 }
 
 // ---------------------------------------------------------------- html helpers
@@ -978,6 +989,9 @@ if(S('start','last')==='last'){try{var p=localStorage.getItem('uno-proj');if(p)s
 "#;
 
 fn now() -> String {
+    if let Ok(v) = env::var("UNO_REPORT_FAKE_NOW") {
+        return v;
+    }
     Command::new("date").arg("+%Y-%m-%d %H:%M").output().ok()
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string()).unwrap_or_default()
 }

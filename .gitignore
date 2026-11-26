@@ -23,3 +23,5 @@ __pycache__/
 *.log
 *.tgz
 *.zip
+
+!tools/uno-report/tests/fixtures/**/audit.log
