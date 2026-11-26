@@ -3,6 +3,10 @@
 version = 4
 
 [[package]]
+name = "adapters-file"
+version = "0.1.0"
+
+[[package]]
 name = "adapters-fs"
 version = "0.1.0"
 dependencies = [
@@ -16,6 +20,15 @@ name = "adapters-os"
 version = "0.1.0"
 dependencies = [
  "app",
+]
+
+[[package]]
+name = "adapters-web"
+version = "0.1.0"
+dependencies = [
+ "app",
+ "domain",
+ "pulldown-cmark",
 ]
 
 [[package]]
@@ -152,11 +165,12 @@ checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
 name = "uno-report"
 version = "0.1.0"
 dependencies = [
+ "adapters-file",
  "adapters-fs",
  "adapters-os",
+ "adapters-web",
  "app",
  "domain",
- "pulldown-cmark",
 ]
 
 [[package]]

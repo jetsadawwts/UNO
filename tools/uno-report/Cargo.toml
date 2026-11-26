@@ -17,7 +17,8 @@ domain = { path = "crates/domain" }
 app = { path = "crates/app" }
 adapters-fs = { path = "crates/adapters-fs" }
 adapters-os = { path = "crates/adapters-os" }
-pulldown-cmark = { version = "0.12", default-features = false, features = ["html"] }
+adapters-web = { path = "crates/adapters-web" }
+adapters-file = { path = "crates/adapters-file" }
 
 [profile.release]
 strip = true

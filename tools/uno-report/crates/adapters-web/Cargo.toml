@@ -1,0 +1,11 @@
+[package]
+name = "adapters-web"
+version = "0.1.0"
+edition.workspace = true
+publish = false
+description = "uno-report adapter: HTML views, charts, assets and the local live server."
+
+[dependencies]
+domain = { path = "../domain" }
+app = { path = "../app" }
+pulldown-cmark = { version = "0.12", default-features = false, features = ["html"] }
