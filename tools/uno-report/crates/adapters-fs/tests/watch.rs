@@ -88,3 +88,32 @@ fn reading_files_is_not_a_change() {
     assert!(!f.wait(Duration::from_millis(800)), "the page's own reads must not trigger a refresh");
     std::fs::remove_dir_all(d).unwrap();
 }
+
+#[test]
+fn steady_writes_still_report_within_about_a_second() {
+    let d = temp("steady");
+    let f = feed(&d);
+    let p = d.join("alpha/audit.log");
+    let t = std::thread::spawn(move || for _ in 0..30 { append(&p); std::thread::sleep(Duration::from_millis(100)) });
+    let start = Instant::now();
+    assert!(f.wait(Duration::from_secs(5)));
+    assert!(start.elapsed() < Duration::from_millis(1500), "drain must stop ~1 s after the first event: {:?}", start.elapsed());
+    t.join().unwrap();
+    std::fs::remove_dir_all(d).unwrap();
+}
+
+#[test]
+fn starts_without_root_and_watches_once_it_appears() {
+    let d = std::env::temp_dir().join(format!("uno-watch-late-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    let f = FsChangeFeed::new(&d, &d.join("manual.md")).expect("a missing data folder is not an error");
+    assert!(!f.wait(Duration::from_millis(300)));
+    std::fs::create_dir_all(d.join("alpha")).unwrap();
+    let _ = f.wait(Duration::from_millis(500)); // arms now that the folder exists
+    std::thread::sleep(Duration::from_millis(200));
+    append(&d.join("alpha/audit.log"));
+    assert!(f.wait(Duration::from_secs(3)), "the new watch sees the write");
+    append(&d.join("alpha/audit.log"));
+    assert!(f.wait(Duration::from_secs(3)), "and keeps seeing writes");
+    std::fs::remove_dir_all(d).unwrap();
+}

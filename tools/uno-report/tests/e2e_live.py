@@ -37,6 +37,13 @@ def append(path, task):
         f.write(json.dumps({"time": "2026-01-12T08:00:00+07:00", "event": "plan-approved", "task": task, "backend": "anthropic"}) + "\n")
 
 
+# Every picker option has its pane, and every project pane has its option.
+CONSISTENT = """(()=>{var o=[...document.querySelectorAll('#psel option')].map(x=>x.value).sort().join();
+  var v=[...document.querySelectorAll('.pview')].map(x=>x.id).sort().join();return o===v})()"""
+SHAPE = """[...document.querySelectorAll('#psel option')].map(x=>x.value).join()+' | '+
+  [...document.querySelectorAll('.pview')].map(x=>x.id).join()"""
+
+
 def until(fn, timeout):
     t0 = time.time()
     while time.time() - t0 < timeout:
@@ -93,13 +100,17 @@ def main():
             states = pg.evaluate("window.__states")
             check("server stopped → Polling, then Offline", off is not None and "poll" in states, f"states={states[-4:]}")
 
+            (data / "aaa").mkdir()  # sorts first: shifts every project pane while the socket is down
+            (data / "aaa" / "tasks.md").write_text("| ID | Task | Status |\n|---|---|---|\n| T1 | Early | open |\n", encoding="utf-8")
             proc = start(port, data)
             back = until(lambda: pg.get_attribute("#liveflag", "data-state") == "live", 35)
             check("server back → Live again within 35 s", back is not None, f"t={back}")
+            fixed = until(lambda: pg.evaluate(CONSISTENT) and "aaa" in pg.inner_text("#psel"), 5)
+            check("reconnect after projects changed → page rebuilt, picker matches panes", fixed is not None, pg.evaluate(SHAPE))
 
             (data / "zeta").mkdir()
             (data / "zeta" / "tasks.md").write_text("| ID | Task | Status |\n|---|---|---|\n| T1 | New | open |\n", encoding="utf-8")
-            added = until(lambda: "zeta" in pg.inner_text("#psel"), 5)
+            added = until(lambda: "zeta" in pg.inner_text("#psel") and pg.evaluate(CONSISTENT), 5)
             check("new project → page lists it", added is not None and not errors, f"errors={errors}")
             b.close()
     finally:

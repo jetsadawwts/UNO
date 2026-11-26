@@ -10,6 +10,8 @@ use notify::{Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
 
 /// Events closer together than this count as one change.
 const QUIET: Duration = Duration::from_millis(300);
+/// …but a steady stream of writes still reports this long after its first event.
+const MAX_DRAIN: Duration = Duration::from_secs(1);
 
 /// False for files this program writes itself and for snapshot folders.
 pub fn relevant(path: &Path) -> bool {
@@ -35,11 +37,14 @@ fn identity(p: &Path) -> Option<(u64, u64)> {
 
 impl FsChangeFeed {
     /// Watch `root` recursively, and the manual's folder when it is outside `root`.
+    /// A `root` that does not exist yet is watched once it appears.
     pub fn new(root: &Path, manual_en: &Path) -> Result<Self, String> {
         let manual_dir = manual_en.parent().filter(|d| !d.starts_with(root)).map(Path::to_path_buf);
         let feed = FsChangeFeed { root: root.to_path_buf(), manual_dir, armed: Mutex::new(None) };
-        let armed = feed.arm()?;
-        *feed.armed.lock().unwrap() = Some(armed);
+        if root.exists() {
+            let armed = feed.arm()?;
+            *feed.armed.lock().unwrap() = Some(armed);
+        }
         Ok(feed)
     }
 
@@ -102,9 +107,14 @@ impl ChangeFeed for FsChangeFeed {
                 }
             }
         }
-        // Drain the burst: stop after QUIET with no relevant event.
+        // Drain the burst: stop after QUIET with no relevant event, or MAX_DRAIN in all.
+        let until = Instant::now() + MAX_DRAIN;
         loop {
-            match armed.rx.recv_timeout(QUIET) {
+            let left = until.saturating_duration_since(Instant::now());
+            if left.is_zero() {
+                return true;
+            }
+            match armed.rx.recv_timeout(QUIET.min(left)) {
                 Ok(ev) if self.root_removed(&ev) => {
                     *slot = None;
                     return true;

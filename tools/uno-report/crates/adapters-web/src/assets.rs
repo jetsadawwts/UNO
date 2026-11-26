@@ -149,8 +149,15 @@ async function refresh(){var k=keep();
  var m=doc.querySelector('header .meta');if(m)document.querySelector('header .meta').innerHTML=m.innerHTML;
  restore(k);flash()}
 var first=true;
-function apply(m){if(m.reload){refresh();return}
- var ids=Object.keys(m.panes||{});if(!ids.length)return;var k=keep();
+// A socket's first message carries every pane. If the page holds a different set (projects
+// changed while the socket was down, or between loading the page and connecting), rebuild it.
+function sameSet(ids){var want=ids.filter(id=>id==='all'||/^p\d+$/.test(id)).sort().join();
+ return want===[...document.querySelectorAll('.pview')].map(x=>x.id).sort().join()}
+var fresh=false;
+function apply(m){var full=fresh;fresh=false;if(m.reload){refresh();return}
+ var ids=Object.keys(m.panes||{});
+ if(ids.some(id=>!document.getElementById(id))||(full&&!sameSet(ids))){refresh();return}
+ if(!ids.length)return;var k=keep();
  ids.forEach(id=>{var el=document.getElementById(id);if(el)el.innerHTML=m.panes[id]});
  if(m.meta!=null)document.querySelector('header .meta').innerHTML=m.meta;
  restore(k);if(!first)flash();window.unoSwaps=(window.unoSwaps||0)+1}
@@ -163,7 +170,7 @@ function stopPoll(){if(poll){clearInterval(poll);poll=null}}
 window.unoLiveArm=function(){if(poll){stopPoll();startPoll()}};
 function retry(){setTimeout(connect,backoff*1000);backoff=Math.min(backoff*2,30)}
 function connect(){try{ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host+'/ws')}catch(e){ws=null;startPoll();retry();return}
- ws.onopen=function(){backoff=1;stopPoll();setState('live')};
+ ws.onopen=function(){backoff=1;fresh=true;stopPoll();setState('live')};
  ws.onmessage=function(e){try{var m=JSON.parse(e.data);apply(m);first=false;sig=m.sig}catch(x){}};
  ws.onclose=function(){ws=null;if(lf.dataset.state!=='off')setState('poll');startPoll();retry()}}
 setState('poll');connect()})();
