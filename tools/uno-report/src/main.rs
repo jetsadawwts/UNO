@@ -20,156 +20,43 @@ use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
+use domain::{clip, is_open, AuditRecord, Event, EventKind, Project, Task, DONE, DROPPED};
+
 // ---------------------------------------------------------------- data
-
-#[derive(Default)]
-struct Project {
-    name: String,
-    events: usize,
-    first: String,
-    last: String,
-    approvals: usize,
-    approvals_local: usize,
-    smoke: usize,
-    asked_owner: usize,
-    edits_normal: usize,
-    edits_review: usize,
-    blocked: BTreeMap<String, usize>,
-    agents: BTreeMap<String, usize>,
-    per_day: BTreeMap<String, usize>,
-    approvals_by_day: BTreeMap<String, usize>,
-    recent: Vec<Event>,
-    sessions: usize,
-    tasks: Vec<Task>,
-}
-
-struct Task {
-    id: String,
-    title: String,
-    status: String,
-}
-
-#[derive(Clone)]
-struct Event {
-    time: String,
-    en: String,
-    th: String,
-}
-
-impl Project {
-    fn count_status(&self, wanted: &[&str]) -> usize {
-        self.tasks.iter().filter(|t| wanted.contains(&t.status.as_str())).count()
-    }
-    fn blocked_total(&self) -> usize {
-        self.blocked.values().sum()
-    }
-    fn reviews(&self) -> usize {
-        *self.agents.get("Epsilon").unwrap_or(&0)
-    }
-    fn open(&self) -> usize {
-        self.tasks.iter().filter(|t| is_open(t)).count()
-    }
-}
-
-const DONE: &[&str] = &["done", "merged"];
-const DROPPED: &[&str] = &["dropped", "won't", "wont"];
-const RECENT_KEEP: usize = 40;
-
-fn is_open(t: &Task) -> bool {
-    !DONE.contains(&t.status.as_str()) && !DROPPED.contains(&t.status.as_str())
-}
-
-fn agent_name(raw: &str) -> String {
-    let id = raw.rsplit(':').next().unwrap_or(raw);
-    let greek = match id {
-        "intake-triager" => "Alpha",
-        "codebase-explorer" => "Beta",
-        "ui-designer" => "Gamma",
-        "test-writer" => "Delta",
-        "security-reviewer" => "Epsilon",
-        "release-manager" => "Zeta",
-        "incident-scribe" => "Eta",
-        "doc-writer" => "Theta",
-        "devops-engineer" => "Iota",
-        "data-engineer" => "Kappa",
-        "architect" => "Lambda",
-        _ => return id.to_string(),
-    };
-    greek.to_string()
-}
-
-fn clip(s: &str, n: usize) -> String {
-    if s.chars().count() <= n { s.to_string() } else { format!("{}…", s.chars().take(n).collect::<String>()) }
-}
 
 fn read_audit(p: &mut Project, path: &Path) {
     let Ok(text) = fs::read_to_string(path) else { return };
     for line in text.lines() {
         let Ok(v) = serde_json::from_str::<Value>(line) else { continue };
         let s = |k: &str| v.get(k).and_then(Value::as_str).unwrap_or("").to_string();
-        p.events += 1;
-        let time = s("time");
-        let day: String = time.chars().take(10).collect();
-        if !time.is_empty() {
-            if p.first.is_empty() || time < p.first {
-                p.first = time.clone();
-            }
-            if time > p.last {
-                p.last = time.clone();
-            }
-            *p.per_day.entry(day.clone()).or_default() += 1;
-        }
-        let event: Option<(String, String)> = match (s("event").as_str(), s("action").as_str()) {
-            ("plan-approved", _) => {
-                p.approvals += 1;
-                *p.approvals_by_day.entry(day.clone()).or_default() += 1;
-                let backend = s("backend");
-                if !backend.is_empty() && backend != "anthropic" {
-                    p.approvals_local += 1;
-                }
-                Some((format!("Plan {} approved", s("task")), format!("อนุมัติแผน {}", s("task"))))
-            }
-            ("smoke", _) => {
-                p.smoke += 1;
-                Some(("Smoke test".into(), "ทดสอบระบบ (smoke test)".into()))
-            }
-            (_, "blocked") => {
-                let rule = [s("rule"), s("zone"), s("tool")].into_iter().find(|x| !x.is_empty()).unwrap_or_default();
-                *p.blocked.entry(rule.clone()).or_default() += 1;
-                let (en, th) = rule_names(&rule);
-                Some((format!("Blocked: {en}"), format!("ระงับ: {th}")))
-            }
-            (_, "asked-owner") => {
-                p.asked_owner += 1;
-                let c = clip(&s("command"), 60);
-                Some((format!("Asked the owner: {c}"), format!("ขอการยืนยัน: {c}")))
-            }
-            (_, "allowed") => {
-                match s("zone").as_str() {
-                    "review" => p.edits_review += 1,
-                    _ => p.edits_normal += 1,
-                }
-                let f = clip(&s("file"), 60);
-                Some((format!("Edited {f}"), format!("แก้ไขไฟล์ {f}")))
-            }
-            (_, "called") if matches!(s("tool").as_str(), "Agent" | "Task") => {
-                let who = agent_name(&s("name"));
-                *p.agents.entry(who.clone()).or_default() += 1;
-                let d = clip(&s("description"), 60);
-                Some((format!("{who}: {d}"), format!("{who}: {d}")))
-            }
-            (_, "called") => {
-                let n = s("name");
-                Some((format!("Skill {n}"), format!("เรียกใช้ skill {n}")))
-            }
-            _ => None,
-        };
-        if let (Some((en, th)), false) = (event, time.is_empty()) {
-            p.recent.push(Event { time: time.clone(), en, th });
-        }
+        p.apply(&AuditRecord {
+            time: s("time"), event: s("event"), action: s("action"), backend: s("backend"), task: s("task"),
+            rule: s("rule"), zone: s("zone"), tool: s("tool"), command: s("command"), file: s("file"),
+            name: s("name"), description: s("description"),
+        });
     }
-    p.recent.sort_by(|a, b| b.time.cmp(&a.time));
-    p.recent.truncate(RECENT_KEEP);
+    p.finish();
+}
+
+/// English and Thai text for an activity-feed entry.
+fn event_text(k: &EventKind) -> (String, String) {
+    match k {
+        EventKind::PlanApproved { task } => (format!("Plan {task} approved"), format!("อนุมัติแผน {task}")),
+        EventKind::Smoke => ("Smoke test".into(), "ทดสอบระบบ (smoke test)".into()),
+        EventKind::Blocked { rule } => {
+            let (en, th) = rule_names(rule);
+            (format!("Blocked: {en}"), format!("ระงับ: {th}"))
+        }
+        EventKind::AskedOwner { command } => (format!("Asked the owner: {command}"), format!("ขอการยืนยัน: {command}")),
+        EventKind::Edited { file } => (format!("Edited {file}"), format!("แก้ไขไฟล์ {file}")),
+        EventKind::Agent { who, description } => (format!("{who}: {description}"), format!("{who}: {description}")),
+        EventKind::Skill { name } => (format!("Skill {name}"), format!("เรียกใช้ skill {name}")),
+    }
+}
+
+fn ev_t(e: &Event) -> String {
+    let (en, th) = event_text(&e.kind);
+    t(&en, &th)
 }
 
 fn cells(line: &str) -> Vec<String> {
@@ -661,7 +548,7 @@ fn activity_panel(projects: &[&Project], sessions_known: bool) -> String {
              <div class=\"lc-last\">{}</div><div class=\"lc-meta\"><span class=\"ago\" data-time=\"{}\"></span> · {}</div></div>",
             esc(&p.last), esc(&p.name),
             t("Working", "กำลังทำงาน"), t("Session open, idle", "เปิด session อยู่ ยังไม่มีกิจกรรม"), t("Not running", "ไม่ได้ทำงาน"),
-            last.map(|e| t(&e.en, &e.th)).unwrap_or_else(|| t("No activity yet", "ยังไม่มีกิจกรรม")),
+            last.map(|e| ev_t(e)).unwrap_or_else(|| t("No activity yet", "ยังไม่มีกิจกรรม")),
             esc(&p.last),
             t(&format!("{sess} open session(s)"), &format!("เปิดอยู่ {sess} session")));
     }
@@ -675,7 +562,7 @@ fn feed(events: &[(&str, &Event)]) -> String {
     }
     for (project, e) in events {
         out += &format!("<li><span class=\"ago\" data-time=\"{}\"></span><span class=\"fp\">{}</span><span>{}</span></li>",
-                        esc(&e.time), esc(project), t(&e.en, &e.th));
+                        esc(&e.time), esc(project), ev_t(e));
     }
     out + "</ul>"
 }
