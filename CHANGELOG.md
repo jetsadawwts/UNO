@@ -2,6 +2,10 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.15 — 2026-11-27
+- **Live dashboard updates in under a second, only the part that changed (R2).** `uno-report --serve` now watches `~/UNO/data` (FSEvents) and re-checks open sessions every 5 s; changes go to the page over a WebSocket (`/ws`) as the changed panes only (overview, each project, project picker, manual), swapped in place without losing the selected project or language. If the socket drops the page polls `/version` as before and reconnects by itself; the header shows Live / Polling / Disconnected. Server: tokio + axum, still 127.0.0.1 only, Host checked on every route, foreign `Origin` refused on `/ws`, at most 8 live pages, GET only. File mode (`--open`, `--watch`) is unchanged except that its page no longer carries the polling script. Tests: 84 Rust tests plus `tools/uno-report/tests/e2e_live.py` (6 browser checks).
+- **After updating:** `launchctl unload ~/Library/LaunchAgents/com.uno.report.plist` → `cargo install --path ~/UNO/uno/tools/uno-report --force` → `launchctl load ~/Library/LaunchAgents/com.uno.report.plist`. Same flags, same plist.
+
 ## v0.5.14 — 2026-11-26
 - **Data check: `Cargo.lock` checksums no longer look like ID numbers.** A sha256 `checksum = "<64 hex>"` line in a `Cargo.lock` can hold 13 digits in a row, which the 13-digit ID rule flagged, forcing `--no-verify` on every dependency change. Only those exact lines in files named `Cargo.lock` skip the ID and secret-string rules; company/project terms and e-mail addresses are still checked on them, and every other line and file is checked as before. New `tests/test_data_check.py` (6 cases) runs in pre-commit after the hook tests.
 

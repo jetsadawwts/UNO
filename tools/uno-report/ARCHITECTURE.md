@@ -21,12 +21,25 @@ it does not depend on.
 | Crate | Owns | Depends on |
 |---|---|---|
 | `domain` | `Project`, `Task`, `AuditRecord`, `Event`/`EventKind`, counting rules (`Project::apply`, `finish`), agent names | std only |
-| `app` | ports `ProjectStore`, `ManualSource`, `SessionProbe`, `Clock`; use cases `build_dashboard`, `signature` | `domain` |
-| `adapters-fs` | `FsStore` (project folders, `audit.log`, `tasks.md`), `FsManual`, `manual_stamp`, parsers | `app`, `domain`, `serde_json` |
+| `app` | ports `ProjectStore`, `ManualSource`, `SessionProbe`, `Clock`, `ChangeFeed`; use cases `build_dashboard`, `signature`, `Watch` | `domain` |
+| `adapters-fs` | `FsStore` (project folders, `audit.log`, `tasks.md`), `FsManual`, `manual_stamp`, parsers, `FsChangeFeed` (notify) | `app`, `domain`, `serde_json`, `notify` |
 | `adapters-os` | `LsofSessions` (macOS), `SystemClock`, `count_sessions` | `app` |
-| `adapters-web` | `render_page`, `PageMode`, `manual_html`, charts, CSS/JS, `Server` (127.0.0.1, Host check, GET only) | `app`, `domain`, `pulldown-cmark` |
+| `adapters-web` | `render_page`, `PageMode`, `manual_html`, `render_panes`, `diff_message`, charts, CSS/JS, `Server` (axum: 127.0.0.1, Host check, GET only, `/ws`) | `app`, `domain`, `pulldown-cmark`, `serde_json`, `tokio`, `axum` |
 | `adapters-file` | `write_atomic` | std only |
-| root | `Cli`, wiring, `LocalClock`/`LocalSessions` (honour `UNO_REPORT_FAKE_NOW` / `UNO_REPORT_FAKE_SESSIONS`) | all of the above, `clap` |
+| root | `Cli`, wiring, `LocalClock`/`LocalSessions` (honour `UNO_REPORT_FAKE_NOW` / `UNO_REPORT_FAKE_SESSIONS`), watcher thread, tokio runtime for `--serve` | all of the above, `clap`, `tokio` |
+
+## Live updates (`--serve`)
+```
+FsChangeFeed (notify, 300 ms debounce) ──┐
+every 5 s (session counts) ──────────────┴─► Watch::step → new signature ─► tokio watch channel
+                                                                                │
+browser ◄── /ws: {"sig","panes":{changed only},"meta"} or {"sig","reload":true} ◄┘ per socket
+```
+- Panes: `psel` (picker options), `all`, `p0`…, `manual`. Each socket remembers what it last sent and sends only the panes whose HTML changed; a different set of panes (project added or removed) sends `reload`.
+- The page swaps panes in place, keeping the selected project, language and open sections. If the socket drops it polls `/version` and reconnects after 1, 2, 4 … 30 s. Header: Live / Polling / Disconnected.
+- Reads are not changes: the watcher ignores `Access` events (rendering opens every file), `uno-report.html`, `*.tmp` and `trash/`.
+- Safety: 127.0.0.1 only; Host checked on every route; `/ws` refuses a foreign `Origin`; at most 8 sockets; the server never acts on what the browser sends.
+- `tests/e2e_live.py` (Playwright, run by hand) checks the whole loop.
 
 ## Rules
 - `domain` and `app` never do I/O. Anything that touches the machine is an adapter.
