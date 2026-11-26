@@ -68,7 +68,7 @@ No code edit before the owner approves a plan. The `guard_plan` hook enforces it
 2. Show the plan in chat and **stop**. Ask the owner to approve with `approve <task-id>` as a chat message (e.g. `approve T7`). Never write the `Approved-by:` line and never run `approve_plan.py` yourself; hooks block both. Only the owner's own chat message approves (the `approve_on_prompt` hook reacts to human prompts only).
 3. If the work needs anything the plan does not cover (another file, another step, a dependency), stop, update the plan, and ask again. Editing the plan voids the approval automatically.
 4. Make every change with the Edit/Write tools, never with shell redirection or `sed -i`, so the gate and the audit log see it.
-5. Prefer commands the project already allows (`cat`, `grep`, `git …`, `npm run …`, `npx tsc`) over `node -e`, `python -c` or other inline scripts, which need a permission prompt and can do anything.
+5. Prefer commands the project already allows (`cat`, `grep`, `git …`, `npm run …`, `npx tsc`) over `node -e`, `python -c` or other inline scripts, which need a permission prompt and can do anything. Run one plain command per Bash call: no `;`/`&&` chains, no `VAR=` assignments, no pipes into `sed`/`sort`/`awk`, no redirects into files outside the project (scratchpad, `/private/tmp`). Each of these makes Claude Code ask the owner even when every part is allowed. To narrow long output, run the allowed command and read its output, or use the Grep/Read tools.
 6. Never edit files under `~/UNO/uno` from a project session; UNO changes are made in the UNO repo and released as a version.
 
 ## 3. Do the work

@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.10 — 2026-11-26
+- **New guard `guard_danger` (Bash): deleting is fine when it can be undone.** Inside the project, destructive commands run without a prompt after the hook keeps a way back in `.uno/recovery.md`: files about to be deleted, discarded or cleaned are copied to `.uno/trash/<time>/`; branches, stashes, HEAD and remote refs about to move are recorded by sha with the restore command. Build caches, node_modules, /tmp and .uno are not copied. The owner is asked only for commands that reach outside the project (files outside it — copied to the trash first when they fit —, sudo, brew or global package removal, pip uninstall, OS settings and services, chmod/chown -R outside), data no snapshot holds (SQL DROP/TRUNCATE/DELETE, migration reset), shred, unpublishing packages, `git clean -x`, and anything too big to snapshot (200 MB). Trash folders older than 30 days are removed on the next snapshot; `recovery.md` keeps the history.
+- **New guard `guard_secrets` (Bash):** blocks shell commands that read a file the `Read(...)` deny rules protect (`cat`, `grep`, `head`, `python -c`, `git show HEAD:path`, globs like `public/*.ini`). Read deny rules alone only stop the Read tool. Patterns come from `.claude/settings*.json` plus a built-in list (.env, *.ini, *.pem, *.key, kubeconfig, tfstate, tfvars, ~/.aws, ~/.kube, ~/.ssh). Git exclusions (`':!**/config.ini'`) and example files (`.env.example`) pass. Not caught: a recursive search with no file named (`grep -r KEY .`). With this guard, auto mode is safe to leave on.
+- Fewer permission prompts: `/core:work` runs one plain command per Bash call (no chains, variable assignments, pipes into sed/sort, or redirects to scratch files), since any of these makes Claude Code ask even when each part is allowed.
+- Settings templates allow `npx tsc --noEmit`, `npx eslint` and `echo`.
+- Hook tests: 148 cases.
+
 ## v0.5.9 — 2026-11-24
 - Settings templates drop `Write(...)` rules: Claude Code 2.1.3xx applies `Edit(...)` rules to Write too and warns that Write rules never match. Remove them from each project's `.claude/settings.local.json`.
 

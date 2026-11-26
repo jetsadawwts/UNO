@@ -152,7 +152,9 @@
       "Bash(terraform validate:*)",
       "Bash(tflint:*)",
       "Bash(kafka-topics --list:*)",
-      "Bash(kafka-topics --describe:*)"
+      "Bash(kafka-topics --describe:*)",
+      "Bash(npx tsc --noEmit*)",
+      "Bash(echo:*)"
     ]
   }
 }

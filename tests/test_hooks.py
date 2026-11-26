@@ -187,6 +187,49 @@ def main():
                       ("aws ec2 terminate-instances --instance-ids i-1", 2)]:
         check(f"infra: {cmd}", hook("guard_infra.py", bash(cmd), repo)[0], want)
 
+    # --- secrets through Bash ---
+    os.makedirs(os.path.join(repo, "public"), exist_ok=True)
+    open(os.path.join(repo, "public", "config.ini"), "w").write("SECRET_KEY=x\n")
+    open(os.path.join(repo, ".env"), "w").write("K=1\n")
+    open(os.path.join(repo, ".env.example"), "w").write("K=\n")
+    for cmd, want in [("cat public/config.ini", 2), ("grep SECRET public/config.ini", 2), ("head -5 .env", 2),
+                      ("tail -n1 ./public/config.ini", 2), ("git show HEAD:public/config.ini", 2),
+                      ("cat public/*.ini", 2), ("python3 -c \"print(open('public/config.ini').read())\"", 2),
+                      ("cat ~/.aws/credentials", 2), ("cat .env.example", 0),
+                      ("git add -A -- . ':!**/config.ini' ':!**/.env*'", 0), ("cat package.json", 0),
+                      ("npm run lint", 0), ("grep -n TODO src/a.ts", 0), ("git status --short", 0),
+                      ("echo .uno >> .git/info/exclude", 0)]:
+        check(f"secrets: {cmd}", hook("guard_secrets.py", bash(cmd), repo)[0], want)
+    for f in ("public/config.ini", ".env", ".env.example"):
+        os.remove(os.path.join(repo, f))
+
+    # --- deleting: snapshot inside the project, ask outside it ---
+    def asks(cmd):
+        code, out = hook("guard_danger.py", bash(cmd), repo)
+        return code == 0 and '"permissionDecision": "ask"' in out
+    open(os.path.join(repo, "u.txt"), "w").write("untracked\n")
+    for cmd, want in [("rm a.txt", False), ("git clean -fd", False), ("git reset --hard", False),
+                      ("git branch -D old", False), ("git stash drop", False), ("git commit --amend -m x", False),
+                      ("docker compose down", False), ("kubectl delete ns x --context minikube", False),
+                      ("rm -rf node_modules", False), ("rm /tmp/x.txt", False), ("npm run build", False),
+                      ("git clean -fdx", True), ("rm /etc/hosts", True), ("rm ~/Library/Preferences/x.plist", True),
+                      ("sudo rm -r /opt/x", True), ("brew uninstall node", True), ("npm uninstall -g typescript", True),
+                      ("pip uninstall requests", True), ("shred a.txt", True), ("defaults delete com.apple.dock", True),
+                      ("psql -c 'DROP TABLE users'", True), ("npx prisma migrate reset", True)]:
+        check(f"danger asks={want}: {cmd}", asks(cmd), want)
+    trash = os.path.join(data, "trash")
+    old = os.path.join(data, "trash", "20000101-000000")
+    os.makedirs(old, exist_ok=True); os.utime(old, (946684800, 946684800))
+    hook("guard_danger.py", bash("rm a.txt"), repo)
+    check("danger: trash older than 30 days pruned", os.path.exists(old), False)
+    kept = [os.path.join(d, f) for d, _, fs in os.walk(trash) for f in fs]
+    check("danger: rm a.txt kept a copy", any(p.endswith("/a.txt") for p in kept), True)
+    check("danger: git clean kept the untracked file", any(p.endswith("/u.txt") for p in kept), True)
+    rec = open(os.path.join(data, "recovery.md")).read()
+    check("danger: branch -D recorded with restore command", "git branch old " in rec, True)
+    check("danger: reset --hard recorded HEAD", "git reset --hard " in rec, True)
+    os.remove(os.path.join(repo, "u.txt"))
+
     # --- no task branch ---
     sh("git", "switch", "-qc", "chore/no-task", "origin/master", cwd=repo)
     check("plan: edit on branch without task id", hook("guard_plan.py", edit("src/a.ts"), repo)[0], 2)
