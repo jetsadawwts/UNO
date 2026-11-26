@@ -20,6 +20,7 @@ adapters-os = { path = "crates/adapters-os" }
 adapters-web = { path = "crates/adapters-web" }
 adapters-file = { path = "crates/adapters-file" }
 clap = { version = "4", features = ["derive"] }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "time", "macros"] }
 
 [profile.release]
 strip = true

@@ -129,7 +129,9 @@ fn main() {
     if cli.serve {
         let port: u16 = cli.port.and_then(|v| v.parse().ok()).unwrap_or(8765);
         let stamp_path = manual_path.clone();
-        Server {
+        // Task 3: the socket gets a fixed signature; Task 4 connects the file watcher.
+        let (_changes_tx, changes) = tokio::sync::watch::channel(String::new());
+        let server = Server {
             port,
             store: FsStore { root: data.clone() },
             manual: FsManual { en_path: manual_path },
@@ -137,8 +139,11 @@ fn main() {
             clock: LocalClock,
             data_label: data.display().to_string(),
             manual_stamp: move || manual_stamp(&stamp_path),
-        }
-        .run(cli.open);
+            changes,
+        };
+        let rt = tokio::runtime::Runtime::new().expect("tokio runtime");
+        rt.block_on(server.run(cli.open));
+        std::process::exit(0);
     }
 
     let run = || match build(&data, &out, &manual_path, watch) {

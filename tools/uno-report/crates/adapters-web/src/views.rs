@@ -183,21 +183,36 @@ pub(crate) fn project_view(p: &Project, sessions_known: bool) -> String {
     out
 }
 
-pub(crate) fn dashboard(projects: &[Project], sessions_known: bool) -> String {
-    // <option> cannot hold markup, so options carry both texts and the script picks one.
-    let mut bar = format!(
-        "<div class=\"pbar\"><button class=\"back\" data-p=\"all\">{}{}</button><select id=\"psel\" aria-label=\"Select a project\">\
-         <option value=\"all\" data-en=\"All projects (overview)\" data-th=\"ภาพรวมทุกโครงการ\">All projects (overview)</option>",
-        icon("back"), t("Back to overview", "กลับสู่ภาพรวม"));
-    let mut views = format!("<div class=\"pview on\" id=\"all\">{}</div>", overview(projects, sessions_known));
+/// `<option>`s of the project picker. `<option>` cannot hold markup, so options carry both
+/// texts and the script picks one.
+pub(crate) fn psel_options(projects: &[Project]) -> String {
+    let mut o = String::from("<option value=\"all\" data-en=\"All projects (overview)\" data-th=\"ภาพรวมทุกโครงการ\">All projects (overview)</option>");
     for (i, p) in projects.iter().enumerate() {
         let open = p.open();
         let (en, th) = (format!("{} · {open} in progress", p.name), format!("{} · ระหว่างดำเนินการ {open} งาน", p.name));
-        bar += &format!("<option value=\"p{i}\" data-en=\"{}\" data-th=\"{}\">{}</option>", esc(&en), esc(&th), esc(&en));
-        views += &format!("<div class=\"pview\" id=\"p{i}\">{}</div>", project_view(p, sessions_known));
+        o += &format!("<option value=\"p{i}\" data-en=\"{}\" data-th=\"{}\">{}</option>", esc(&en), esc(&th), esc(&en));
     }
-    bar += "</select></div>";
-    bar + &views
+    o
+}
+
+pub(crate) fn dashboard(projects: &[Project], sessions_known: bool) -> String {
+    let mut out = format!(
+        "<div class=\"pbar\"><button class=\"back\" data-p=\"all\">{}{}</button><select id=\"psel\" aria-label=\"Select a project\">{}</select></div>",
+        icon("back"), t("Back to overview", "กลับสู่ภาพรวม"), psel_options(projects));
+    out += &format!("<div class=\"pview on\" id=\"all\">{}</div>", overview(projects, sessions_known));
+    for (i, p) in projects.iter().enumerate() {
+        out += &format!("<div class=\"pview\" id=\"p{i}\">{}</div>", project_view(p, sessions_known));
+    }
+    out
+}
+
+/// The header's one-line note: when, how many projects, where from.
+pub(crate) fn meta_html(d: &app::Dashboard, data_label: &str, watch: Option<u64>) -> String {
+    let (n, stamp) = (d.projects.len(), &d.generated_at);
+    t(&format!("Generated {stamp} · {n} projects · Source {}{}", data_label,
+               watch.map(|m| format!(" · regenerated every {m} min")).unwrap_or_default()),
+      &format!("จัดทำเมื่อ {stamp} · {n} โครงการ · แหล่งข้อมูล {}{}", data_label,
+               watch.map(|m| format!(" · สร้างใหม่ทุก {m} นาที")).unwrap_or_default()))
 }
 
 
@@ -249,8 +264,6 @@ pub enum PageMode {
 /// The whole page: header, dashboard, manual and settings. Byte-identical to v0.5.12.
 pub fn render_page(d: &app::Dashboard, m: &app::ports::ManualText, data_label: &str, mode: &PageMode) -> String {
     let watch = match mode { PageMode::File { watch } => *watch, PageMode::Live => None };
-    let n = d.projects.len();
-    let stamp = &d.generated_at;
     let header = format!(
         "<header><h1>{}UNO</h1><nav><button class=\"on\" data-v=\"dash\">{}{}</button><button data-v=\"manual\">{}{}</button></nav>\
          <div class=\"hright\"><span id=\"liveflag\" class=\"pill-btn\" hidden title=\"uno-report --serve\"><i class=\"ld\"></i><span class=\"l-on\">{}</span><span class=\"l-off\">{}</span></span><span id=\"reloadflag\" class=\"pill-btn\" hidden>{}{}</span>\
@@ -263,10 +276,7 @@ pub fn render_page(d: &app::Dashboard, m: &app::ports::ManualText, data_label: &
         icon("refresh"), "<span class=\"l-en\">Reload every <b class=\"n\"></b> min</span><span class=\"l-th\">โหลดใหม่ทุก <b class=\"n\"></b> นาที</span>",
         icon("auto"), t("Auto (by time)", "อัตโนมัติ (ตามเวลา)"), icon("sun"), t("Light", "โหมดสว่าง"), icon("moon"), t("Dark", "โหมดมืด"),
         icon("gear"), t("Settings", "ตั้งค่า"),
-        t(&format!("Generated {stamp} · {n} projects · Source {}{}", data_label,
-                   watch.map(|m| format!(" · regenerated every {m} min")).unwrap_or_default()),
-          &format!("จัดทำเมื่อ {stamp} · {n} โครงการ · แหล่งข้อมูล {}{}", data_label,
-                   watch.map(|m| format!(" · สร้างใหม่ทุก {m} นาที")).unwrap_or_default())));
+        meta_html(d, data_label, watch));
     let page = format!(
         "<!DOCTYPE html><html lang=\"en\" data-lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\
          <title>UNO — Dashboard and Manual</title><script>{}{HEAD_JS}</script><style>{CSS}</style></head><body>{header}\
