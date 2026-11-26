@@ -6,6 +6,7 @@ Checks the lines being added in staged files for:
   - extra terms in .forbidden-terms (local, one per line: company, client, hospital names...)
   - e-mail addresses other than the allowed ones
   - 13-digit national ID numbers and long secret-looking strings
+    (not on `checksum = "<64 hex>"` lines of a Cargo.lock: a sha256 can hold 13 digits in a row)
 Exit 1 lists the findings; nothing is changed. Bypass only after checking: git commit --no-verify
 """
 import re
@@ -20,6 +21,7 @@ EMAIL = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
 THAI_ID = re.compile(r"(?<!\d)\d{13}(?!\d)")
 SECRET = re.compile(r"(?<![A-Za-z0-9+/=_-])[A-Za-z0-9+/=_-]{40,}(?![A-Za-z0-9+/=_-])")
 SKIP_FILES = {"scripts/check_no_company_data.py"}
+LOCK_CHECKSUM = re.compile(r'checksum = "[0-9a-f]{64}"')
 
 
 def looks_secret(run):
@@ -74,6 +76,8 @@ def main():
         for e in EMAIL.findall(text):
             if e.lower() not in ALLOWED_EMAILS and not e.lower().endswith(ALLOWED_EMAIL_DOMAINS):
                 bad.append((path, f"e-mail '{e}'", text))
+        if path.split("/")[-1] == "Cargo.lock" and LOCK_CHECKSUM.fullmatch(text):
+            continue
         if THAI_ID.search(text):
             bad.append((path, "13-digit ID number", text))
         if any(looks_secret(m) for m in SECRET.findall(text)):

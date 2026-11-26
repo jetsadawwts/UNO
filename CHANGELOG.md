@@ -2,6 +2,9 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.14 — 2026-11-26
+- **Data check: `Cargo.lock` checksums no longer look like ID numbers.** A sha256 `checksum = "<64 hex>"` line in a `Cargo.lock` can hold 13 digits in a row, which the 13-digit ID rule flagged, forcing `--no-verify` on every dependency change. Only those exact lines in files named `Cargo.lock` skip the ID and secret-string rules; company/project terms and e-mail addresses are still checked on them, and every other line and file is checked as before. New `tests/test_data_check.py` (6 cases) runs in pre-commit after the hook tests.
+
 ## v0.5.13 — 2026-11-26
 - **`uno-report` is now a Ports & Adapters workspace (R1).** `tools/uno-report` splits into `domain` (counting rules), `app` (ports and use cases), `adapters-fs`, `adapters-os`, `adapters-web`, `adapters-file`, and the root CLI; Cargo enforces that the core does no I/O and adapters do not depend on each other (`tools/uno-report/ARCHITECTURE.md`). Command line parsing uses `clap`. **No visible change:** a golden test proves the page and `--help` are byte-identical to v0.5.12; 60 tests in total. Also fixes a crash when an audit record has no full date (`time` missing or shorter than a day). Prepares R2 (real-time updates) and R3 (settings, config, logging).
 - **After updating:** `launchctl unload ~/Library/LaunchAgents/com.uno.report.plist` → `cargo install --path ~/UNO/uno/tools/uno-report --force` → `launchctl load ~/Library/LaunchAgents/com.uno.report.plist`. Same flags, same plist.
