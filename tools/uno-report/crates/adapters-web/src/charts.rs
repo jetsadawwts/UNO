@@ -124,7 +124,7 @@ pub(crate) fn daily_by_project(projects: &[&Project]) -> String {
         let total: usize = vals.iter().sum();
         svg += &format!("<text x=\"{:.1}\" y=\"{:.1}\" text-anchor=\"middle\" class=\"val\">{total}</text>\
                          <text x=\"{:.1}\" y=\"{}\" text-anchor=\"middle\" class=\"lbl\">{}</text>",
-                        x + bw / 2.0, y - 4.0, x + bw / 2.0, height + 16.0, &day[5..]);
+                        x + bw / 2.0, y - 4.0, x + bw / 2.0, height + 16.0, day.get(5..).unwrap_or(""));
     }
     svg += "</svg>";
     let leg: Vec<(String, String, &str)> = projects.iter().enumerate().map(|(i, p)| (p.name.clone(), p.name.clone(), color_of(i))).collect();
@@ -160,7 +160,7 @@ pub(crate) fn approvals_line(projects: &[&Project]) -> String {
         svg += &format!("<circle cx=\"{:.1}\" cy=\"{:.1}\" r=\"3.5\" fill=\"var(--c1)\"/>\
                          <text x=\"{:.1}\" y=\"{:.1}\" text-anchor=\"middle\" class=\"val\">{v}</text>\
                          <text x=\"{:.1}\" y=\"{}\" text-anchor=\"middle\" class=\"lbl\">{}</text>",
-                        xs(i), ys(*v), xs(i), ys(*v) - 8.0, xs(i), top + height + 18.0, &d[5..]);
+                        xs(i), ys(*v), xs(i), ys(*v) - 8.0, xs(i), top + height + 18.0, d.get(5..).unwrap_or(""));
     }
     figure("approve", title, false, &(svg + "</svg>"))
 }

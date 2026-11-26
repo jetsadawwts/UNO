@@ -89,21 +89,28 @@ struct Cli {
     help: bool,
 }
 
-/// v0.5.12 ignored arguments it did not know; clap stops at the first one, so drop them first.
-/// Value flags keep the next argument as their value.
+/// Make argv look like what v0.5.12 accepted before clap sees it: unknown arguments are
+/// dropped (clap stops at the first one), and each flag keeps only its first occurrence
+/// (v0.5.12 read the first value; clap rejects repeats). Value flags take the next argument.
 fn known_args(args: impl Iterator<Item = String>) -> Vec<String> {
     const VALUE: &[&str] = &["--data", "--out", "--manual", "--watch", "--port"];
     const SWITCH: &[&str] = &["--open", "--serve", "--help", "-h"];
     let mut args = args;
     let mut out: Vec<String> = args.next().into_iter().collect();
+    let mut seen: Vec<String> = Vec::new();
     while let Some(a) = args.next() {
+        let key = if a == "-h" { "--help".to_string() } else { a.clone() };
+        let first = !seen.contains(&key);
         if VALUE.contains(&a.as_str()) {
             if let Some(v) = args.next() {
-                out.extend([a, v]);
+                if first {
+                    out.extend([a, v]);
+                }
             }
-        } else if SWITCH.contains(&a.as_str()) {
+        } else if SWITCH.contains(&a.as_str()) && first {
             out.push(a);
         }
+        seen.push(key);
     }
     out
 }

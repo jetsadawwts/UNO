@@ -67,3 +67,22 @@ fn serve_on_busy_port_fails() {
     assert_eq!(r.status.code(), Some(1));
     assert!(String::from_utf8_lossy(&r.stderr).contains(&format!("cannot listen on 127.0.0.1:{port}")));
 }
+
+#[test]
+fn repeated_value_flag_first_wins() {
+    let o = out("repeat");
+    let r = run(&["--data", data().to_str().unwrap(), "--data", "/nonexistent-uno", "--out", o.to_str().unwrap(), "--out", "/nonexistent-uno/x.html"]);
+    assert!(r.status.success(), "{}", String::from_utf8_lossy(&r.stderr));
+    assert!(String::from_utf8_lossy(&r.stdout).contains("2 projects →"));
+    assert!(o.exists());
+    std::fs::remove_file(o).unwrap();
+}
+
+#[test]
+fn repeated_switch_stays_on() {
+    let l = std::net::TcpListener::bind(("127.0.0.1", 0)).unwrap();
+    let port = l.local_addr().unwrap().port().to_string();
+    let r = run(&["--serve", "--serve", "--port", &port, "--data", data().to_str().unwrap()]);
+    assert_eq!(r.status.code(), Some(1), "--serve --serve must still serve");
+    assert_eq!(run(&["-h", "-h"]).stdout, run(&["--help"]).stdout);
+}

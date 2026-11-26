@@ -130,3 +130,19 @@ fn manual_none_shows_location_message() {
     assert!(h.contains("No manual found at /m/manual.md — add manual.md there and run again."));
     assert!(h.contains("ไม่พบคู่มือที่ /m/manual.md — วางไฟล์ manual.md ไว้แล้วรันใหม่"));
 }
+
+#[test]
+fn records_without_full_time_do_not_panic() {
+    struct Odd;
+    impl ProjectStore for Odd {
+        fn projects(&self) -> Result<Vec<ProjectFiles>, String> {
+            let a = AuditRecord { event: "plan-approved".into(), task: "T1".into(), ..Default::default() };
+            let b = AuditRecord { event: "smoke".into(), time: "2026".into(), ..Default::default() };
+            Ok(vec![ProjectFiles { name: "alpha".into(), audit: vec![a, b], tasks: vec![] }])
+        }
+        fn stamp(&self) -> String { String::new() }
+    }
+    let d = app::build_dashboard(&Odd, &Sess(None), &Clk).unwrap();
+    let page = render_page(&d, &Man.manual(), "/d", &PageMode::Live);
+    assert!(page.contains("alpha"));
+}
