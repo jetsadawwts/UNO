@@ -9,3 +9,4 @@ description = "uno-report adapter: reads ~/UNO/data (audit.log, tasks.md, manual
 domain = { path = "../domain" }
 app = { path = "../app" }
 serde_json = "1"
+notify = { version = "8", default-features = false, features = ["macos_fsevent"] }
