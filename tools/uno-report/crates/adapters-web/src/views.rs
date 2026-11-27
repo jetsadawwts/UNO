@@ -18,6 +18,7 @@ pub(crate) fn event_text(k: &EventKind) -> (String, String) {
         EventKind::Edited { file } => (format!("Edited {file}"), format!("แก้ไขไฟล์ {file}")),
         EventKind::Agent { who, description } => (format!("{who}: {description}"), format!("{who}: {description}")),
         EventKind::Skill { name } => (format!("Skill {name}"), format!("เรียกใช้ skill {name}")),
+        EventKind::Tool { who, tool } => (format!("{who}: used {tool}"), format!("{who}: ใช้ {tool}")),
     }
 }
 
@@ -77,16 +78,17 @@ pub(crate) fn activity_panel(projects: &[&Project], sessions_known: bool) -> Str
         t("From open Claude Code sessions and the latest audit.log events",
           "จาก session ของ Claude Code ที่เปิดอยู่ และเหตุการณ์ล่าสุดใน audit.log"));
     for p in projects {
-        let last = p.recent.first();
+        let last = p.activity();
+        let at = last.map(|e| e.time.as_str()).unwrap_or("");
         let sess = if sessions_known { p.sessions.to_string() } else { "?".into() };
         out += &format!(
             "<div class=\"livecard\" data-last=\"{}\" data-sessions=\"{sess}\"><div class=\"lc-top\"><span class=\"dot\"></span><b>{}</b>\
              <span class=\"st st-working\">{}</span><span class=\"st st-open\">{}</span><span class=\"st st-idle\">{}</span></div>\
              <div class=\"lc-last\">{}</div><div class=\"lc-meta\"><span class=\"ago\" data-time=\"{}\"></span> · {}</div></div>",
-            esc(&p.last), esc(&p.name),
+            esc(at), esc(&p.name),
             t("Working", "กำลังทำงาน"), t("Session open, idle", "เปิด session อยู่ ยังไม่มีกิจกรรม"), t("Not running", "ไม่ได้ทำงาน"),
             last.map(ev_t).unwrap_or_else(|| t("No activity yet", "ยังไม่มีกิจกรรม")),
-            esc(&p.last),
+            esc(at),
             t(&format!("{sess} open session(s)"), &format!("เปิดอยู่ {sess} session")));
     }
     out + "</div>"

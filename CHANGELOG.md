@@ -2,6 +2,13 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.19 — 2026-11-27
+- **The team activity card now follows the work.** It took its time and Working state from the newest `audit.log` line of any kind but its text from the newest listed event, so a short session that only opened and closed showed "Working", "12 min ago" and an hour-old agent task. Reading, running commands and editing `.uno/` files (plans, specs, tasks) logged nothing, so a busy session also looked closed after 30 minutes.
+  - Card text, time and Working state now come from the same activity; session start and end are not activity, and a project with no open session never shows Working.
+  - New hook `trace_heartbeat.py` (PreToolUse, every tool): at most once a minute per session it overwrites `.uno/heartbeat/<session>.json` with time, session id, tool name and agent id — no commands, paths or content, nothing added to `audit.log`; files older than a day are removed. `uno-report` uses it to count open sessions and to show lines such as `Beta: used Grep`. Heartbeats change no dashboard count.
+  - Limit: a session that calls no tool for 30 minutes still counts as closed, and the card can lag the latest tool by up to a minute.
+- **After updating:** in Claude Code `/plugin marketplace update uno`, update `core@uno`, and restart open Claude Code sessions (the new hook runs in sessions started afterwards); then stop `uno-report --serve`, `cargo install --path ~/UNO/uno/tools/uno-report --force --locked`, and start it again.
+
 ## v0.5.18 — 2026-11-27
 - **Hooks now work when the plugin folder's path has a space.** Every command in `hooks.json` used `python3 ${CLAUDE_PLUGIN_ROOT}/hooks/<hook>.py` without quotes. Claude Code in the Terminal installs plugins under `~/.claude/plugins/…` (no space), but the Claude app's local agent mode loads the plugin under `~/Library/Application Support/Claude/…`: the shell split the path, `python3` exited 2, and every hook — all eight guards included — failed there (Claude Code treats exit 2 as a block). The path is now quoted (`python3 "${CLAUDE_PLUGIN_ROOT}/hooks/<hook>.py"`), and so is the scanner path in `/core:portfolio-scan`. New `tests/test_hooks_json.py` runs every `hooks.json` command through a shell with the plugin under a folder named `Application Support` (12 cases); it runs in pre-commit.
 - **After updating:** `/plugin marketplace update uno` and update `core@uno` in Claude Code; in the Claude app, reload or re-add the UNO plugin so it picks up 0.5.18. Until then do not rely on UNO's guards inside the Claude app.

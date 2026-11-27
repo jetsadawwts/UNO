@@ -32,7 +32,12 @@ impl ProjectStore for FsStore {
                 continue;
             }
             let read = |p: &Path| fs::read_to_string(p).unwrap_or_default();
-            out.push(ProjectFiles { name, audit: parse_audit(&read(&audit)), tasks: parse_tasks(&read(&tasks)) });
+            let mut records = parse_audit(&read(&audit));
+            // One small file per session from trace_heartbeat.py.
+            for beat in beat_files(&dir) {
+                records.extend(parse_audit(&read(&beat)).into_iter().filter(|r| r.action == "heartbeat"));
+            }
+            out.push(ProjectFiles { name, audit: records, tasks: parse_tasks(&read(&tasks)) });
         }
         Ok(out)
     }
@@ -42,9 +47,20 @@ impl ProjectStore for FsStore {
         for d in self.dirs().unwrap_or_default() {
             sig += &file_stamp(&d.join("audit.log"));
             sig += &file_stamp(&d.join("tasks.md"));
+            for beat in beat_files(&d) {
+                sig += &file_stamp(&beat);
+            }
         }
         sig
     }
+}
+
+/// `heartbeat/*.json` in one project folder, sorted by path.
+fn beat_files(project: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = fs::read_dir(project.join("heartbeat")) else { return Vec::new() };
+    let mut files: Vec<PathBuf> = entries.flatten().map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "json")).collect();
+    files.sort();
+    files
 }
 
 /// `manual.md` (English) and `manual.th.md` next to it (Thai).
@@ -69,4 +85,42 @@ pub fn manual_stamp(en_path: &Path) -> String {
 
 fn file_stamp(p: &Path) -> String {
     fs::metadata(p).ok().map(|m| format!("{}:{:?};", m.len(), m.modified().ok())).unwrap_or_default()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn root(tag: &str) -> PathBuf {
+        let r = std::env::temp_dir().join(format!("uno-store-{tag}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&r);
+        fs::create_dir_all(r.join("p/heartbeat")).unwrap();
+        fs::write(r.join("p/audit.log"), "{\"time\":\"2026-01-02T03:00:00+00:00\",\"session\":\"a\",\"action\":\"session-start\"}\n").unwrap();
+        r
+    }
+    const BEAT: &str = "{\"time\":\"2026-01-02T03:50:00+00:00\",\"session\":\"b\",\"action\":\"heartbeat\",\"tool\":\"Read\",\"name\":\"\"}";
+
+    #[test]
+    fn heartbeat_files_are_read_with_the_audit_records() {
+        let r = root("read");
+        fs::write(r.join("p/heartbeat/b.json"), BEAT).unwrap();
+        fs::write(r.join("p/heartbeat/b.tmp"), BEAT).unwrap();
+        fs::write(r.join("p/heartbeat/broken.json"), "{").unwrap();
+        fs::write(r.join("p/heartbeat/other.json"), "{\"action\":\"blocked\",\"time\":\"t\"}").unwrap();
+        let files = FsStore { root: r.clone() }.projects().unwrap();
+        let actions: Vec<_> = files[0].audit.iter().map(|a| a.action.as_str()).collect();
+        assert_eq!(actions, ["session-start", "heartbeat"]);
+        assert_eq!(crate::sessions_at(&r, domain::parse_time("2026-01-02T04:00:00+00:00").unwrap()).get("p"), Some(&1));
+        let _ = fs::remove_dir_all(&r);
+    }
+
+    #[test]
+    fn stamp_changes_with_a_heartbeat() {
+        let r = root("stamp");
+        let store = FsStore { root: r.clone() };
+        let before = store.stamp();
+        fs::write(r.join("p/heartbeat/b.json"), BEAT).unwrap();
+        assert_ne!(before, store.stamp());
+        let _ = fs::remove_dir_all(&r);
+    }
 }

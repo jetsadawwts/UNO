@@ -114,6 +114,19 @@ mod tests {
     }
 
     #[test]
+    fn card_time_is_the_activity_time_not_session_end() {
+        let rec = |action: &str, time: &str| AuditRecord { action: action.into(), tool: "Agent".into(), name: "core:intake-triager".into(), session: "s".into(), time: time.into(), ..Default::default() };
+        let mut p = domain::Project { name: "x".into(), ..Default::default() };
+        p.apply(&rec("called", "2026-01-02T03:05:49+00:00"));
+        p.apply(&rec("session-end", "2026-01-02T03:47:56+00:00"));
+        p.finish();
+        let card = crate::views::activity_panel(&[&p], true);
+        assert!(card.contains("data-last=\"2026-01-02T03:05:49+00:00\""), "{card}");
+        assert!(card.contains("data-time=\"2026-01-02T03:05:49+00:00\""), "{card}");
+        assert!(!card.contains("03:47:56"), "{card}");
+    }
+
+    #[test]
     fn message_escapes_quotes_newlines_and_thai() {
         let mut p = Panes { panes: BTreeMap::new(), meta: "a\"b\\c\nกข\u{1}".into() };
         p.panes.insert("all".into(), "<p class=\"x\">\t</p>".into());

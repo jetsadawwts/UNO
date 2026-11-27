@@ -22,7 +22,7 @@ it does not depend on.
 |---|---|---|
 | `domain` | `Project`, `Task`, `AuditRecord`, `Event`/`EventKind`, counting rules (`Project::apply`, `finish`), agent names, `open_sessions`, `parse_time` | std only |
 | `app` | ports `ProjectStore`, `ManualSource`, `SessionProbe`, `Clock`, `ChangeFeed`; use cases `build_dashboard`, `signature`, `Watch` | `domain` |
-| `adapters-fs` | `FsStore` (project folders, `audit.log`, `tasks.md`), `FsManual`, `manual_stamp`, parsers, `FsChangeFeed` (notify), `AuditSessions` (open sessions from audit events) | `app`, `domain`, `serde_json`, `notify` |
+| `adapters-fs` | `FsStore` (project folders, `audit.log`, `tasks.md`, `heartbeat/*.json`), `FsManual`, `manual_stamp`, parsers, `FsChangeFeed` (notify), `AuditSessions` (open sessions from audit events) | `app`, `domain`, `serde_json`, `notify` |
 | `adapters-os` | `SystemClock` | `app` |
 | `adapters-web` | `render_page`, `PageMode`, `manual_html`, `render_panes`, `diff_message`, charts, CSS/JS, `Server` (axum: 127.0.0.1, Host check, GET only, `/ws`) | `app`, `domain`, `pulldown-cmark`, `serde_json`, `tokio`, `axum` |
 | `adapters-file` | `write_atomic` | std only |
@@ -42,7 +42,7 @@ browser ◄── /ws: {"sig","panes":{changed only},"meta"} or {"sig","reload":
 - `tests/e2e_live.py` (Playwright, run by hand) checks the whole loop.
 
 ## Open sessions
-UNO's `trace_session.py` hook writes `session-start` / `session-end` to the project's `audit.log`, and every hook event carries the session id. A session counts as open when its latest event is not `session-end` and is at most 30 minutes old (`SESSION_IDLE_SECS`: Claude Code can exit without running SessionEnd). uno-report does not look at other processes on the machine.
+UNO's `trace_session.py` hook writes `session-start` / `session-end` to the project's `audit.log`, and every hook event carries the session id. `trace_heartbeat.py` also overwrites `heartbeat/<session>.json` at most once a minute while tools run; `FsStore` reads these with the audit records (action `heartbeat`). They feed the session count and the activity card only (`Project::activity`), never counts or the feed. Session start and end are not activity. A session counts as open when its latest event is not `session-end` and is at most 30 minutes old (`SESSION_IDLE_SECS`: Claude Code can exit without running SessionEnd). uno-report does not look at other processes on the machine.
 
 ## Rules
 - `domain` and `app` never do I/O. Anything that touches the machine is an adapter.

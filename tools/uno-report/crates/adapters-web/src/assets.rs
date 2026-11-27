@@ -111,7 +111,7 @@ function ages(){var win=+S('window','15');
  document.querySelectorAll('.ago').forEach(e=>e.textContent=ago(e.dataset.time));
  document.querySelectorAll('.livecard').forEach(c=>{var t=Date.parse(c.dataset.last),s=c.dataset.sessions,
   recent=!isNaN(t)&&(Date.now()-t)<win*60000,open=s!=='?'&&+s>0;
-  c.classList.remove('working','open','idle');c.classList.add(recent?'working':(open?'open':'idle'))})}
+  c.classList.remove('working','open','idle');c.classList.add(recent&&s!=='0'?'working':(open?'open':'idle'))})}
 setInterval(ages,30000);
 // settings
 var dlg=document.getElementById('settings');

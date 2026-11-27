@@ -27,6 +27,8 @@ pub enum EventKind {
     Edited { file: String },
     Agent { who: String, description: String },
     Skill { name: String },
+    /// Latest tool use, from the heartbeat hook.
+    Tool { who: String, tool: String },
 }
 
 #[derive(Clone, Debug, PartialEq)]

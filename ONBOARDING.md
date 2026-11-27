@@ -57,6 +57,7 @@ portfolio-scan  →  registry (human)  →  onboard, per project, wave by wave
 | `plugins/core/agents/security-reviewer.md` | **Epsilon** — read-only subagent: patient data, secrets, auth review of a diff |
 | `plugins/core/agents/ui-designer.md` | **Gamma** — UI design for any project: frontend-design for direction, design intent match/refresh/new, accessibility baseline, extra rules for `sensitive` tier |
 | `plugins/core/hooks/guard_zones.py` | blocks agent edits in forbidden zones, logs every edit to `.uno/audit.log` |
+| `plugins/core/hooks/trace_heartbeat.py` | notes at most once a minute that a session is working (`.uno/heartbeat/<session>.json`: time, session id, tool and agent names only), for the dashboard's team activity |
 | `plugins/core/hooks/trace_agents.py` | records every skill and subagent call (UNO, Superpowers, Gamma, Epsilon) to `.uno/audit.log`, so you can see afterwards which flow a task followed |
 | `plugins/core/hooks/guard_git.py` | blocks commit/merge on the default branch, pushes to it, and plain force push |
 | `registry/projects.example.yaml` | shape of the project registry (tier, wave, owner, autonomy) |

@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 HOOKS = os.path.join(ROOT, "plugins", "core", "hooks")
@@ -263,6 +264,57 @@ def main():
     r = subprocess.run([sys.executable, os.path.join(HOOKS, "trace_session.py")], input="not json",
                        capture_output=True, text=True, env=CLEAN_ENV)
     check("trace_session: bad input exits 0", r.returncode, 0)
+
+    # trace_heartbeat: one small file per session, at most once a minute, names only
+    beats = os.path.join(repo, ".uno", "heartbeat")
+    def beat_file(sid):
+        try:
+            with open(os.path.join(beats, sid + ".json"), encoding="utf-8") as fh:
+                return json.load(fh)
+        except (OSError, ValueError):
+            return {}
+    def beat(sid, tool, tool_input=None, **extra):
+        return hook("trace_heartbeat.py", dict({"session_id": sid, "tool_name": tool, "tool_input": tool_input or {}}, **extra), repo)
+    def age(sid, seconds):
+        old = beat_file(sid)
+        if old:
+            old["time"] = (datetime.now(timezone.utc) - timedelta(seconds=seconds)).isoformat(timespec="seconds")
+            with open(os.path.join(beats, sid + ".json"), "w", encoding="utf-8") as fh:
+                json.dump(old, fh)
+    log_before = open(log, encoding="utf-8").read()
+    rc, out = beat("h-1", "Read", {"file_path": "/x/SECRET-PATH"})
+    b = beat_file("h-1")
+    check("heartbeat: exits 0 silently", (rc, out), (0, ""))
+    check("heartbeat: fields", sorted(b), ["action", "name", "session", "time", "tool"])
+    check("heartbeat: values", (b.get("action"), b.get("session"), b.get("tool"), b.get("name")), ("heartbeat", "h-1", "Read", ""))
+    beat("h-1", "Bash", {"command": "echo SECRET-CMD"})
+    check("heartbeat: throttled within a minute", beat_file("h-1").get("tool"), "Read")
+    age("h-1", 61)
+    beat("h-1", "Bash", {"command": "echo SECRET-CMD"})
+    check("heartbeat: written again after a minute", beat_file("h-1").get("tool"), "Bash")
+    check("heartbeat: no command or input stored", "SECRET" in json.dumps(beat_file("h-1")), False)
+    beat("h-2", "Agent", {"subagent_type": "core:ui-designer", "prompt": "SECRET-PROMPT"})
+    check("heartbeat: Agent call stores the agent", beat_file("h-2").get("name"), "core:ui-designer")
+    beat("h-3", "Grep", agent_type="core:codebase-explorer")
+    check("heartbeat: tool inside a subagent stores the agent", beat_file("h-3").get("name"), "core:codebase-explorer")
+    check("heartbeat: audit.log untouched", open(log, encoding="utf-8").read(), log_before)
+    for bad in ("../escape", "a/b", "", None):
+        rc, _ = beat(bad, "Read")
+        check(f"heartbeat: unsafe session id {bad!r} ignored", rc, 0)
+    check("heartbeat: only the good sessions have files",
+          sorted(os.listdir(beats)) if os.path.isdir(beats) else [], ["h-1.json", "h-2.json", "h-3.json"])
+    check("heartbeat: nothing written outside", os.path.exists(os.path.join(repo, ".uno", "escape.json")), False)
+    os.makedirs(beats, exist_ok=True)
+    stale = os.path.join(beats, "gone.json")
+    open(stale, "w").write("{}")
+    os.utime(stale, (0, 0))
+    beat("h-4", "Read")
+    check("heartbeat: files older than a day removed", os.path.exists(stale), False)
+    rc, _ = hook("trace_heartbeat.py", {"session_id": "h-5", "tool_name": "Read"}, bare)
+    check("heartbeat: no .uno → nothing written", (rc, os.path.exists(os.path.join(bare, ".uno"))), (0, False))
+    r = subprocess.run([sys.executable, os.path.join(HOOKS, "trace_heartbeat.py")], input="[1]",
+                       capture_output=True, text=True, env=CLEAN_ENV)
+    check("heartbeat: bad input exits 0", r.returncode, 0)
 
     shutil.rmtree(tmp, ignore_errors=True)
     failed = [r for r in results if not r[1]]

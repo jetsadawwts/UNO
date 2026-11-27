@@ -20,6 +20,8 @@ pub struct Project {
     pub per_day: BTreeMap<String, usize>,
     pub approvals_by_day: BTreeMap<String, usize>,
     pub recent: Vec<Event>,
+    /// Newest heartbeat, if any.
+    pub beat: Option<Event>,
     pub sessions: usize,
     pub tasks: Vec<Task>,
 }
@@ -38,8 +40,26 @@ impl Project {
         self.tasks.iter().filter(|t| is_open(t)).count()
     }
 
+    /// What the team did last: the newest logged event or heartbeat. A logged event says more,
+    /// so it wins a tie. Session start and end are not activity.
+    pub fn activity(&self) -> Option<&Event> {
+        match (self.recent.first(), self.beat.as_ref()) {
+            (Some(e), Some(b)) if b.time > e.time => Some(b),
+            (Some(e), _) => Some(e),
+            (None, b) => b,
+        }
+    }
+
     /// Count one audit record. Call [`Project::finish`] after the last one.
     pub fn apply(&mut self, r: &AuditRecord) {
+        if r.action == "heartbeat" {
+            // Liveness only: not an event, so it changes no count and stays out of the feed.
+            if !r.time.is_empty() && self.beat.as_ref().is_none_or(|b| r.time > b.time) {
+                let who = if r.name.is_empty() { "Uno".to_string() } else { agent_name(&r.name) };
+                self.beat = Some(Event { time: r.time.clone(), kind: EventKind::Tool { who, tool: clip(&r.tool, 60) } });
+            }
+            return;
+        }
         self.events += 1;
         let time = &r.time;
         let day: String = time.chars().take(10).collect();
@@ -109,6 +129,57 @@ mod tests {
         let mut r = AuditRecord::default();
         f(&mut r);
         r
+    }
+
+    fn agent_call(time: &str) -> AuditRecord {
+        rec(|r| { r.action = "called".into(); r.tool = "Agent".into(); r.name = "core:intake-triager".into(); r.description = "Write spec".into(); r.session = "s1".into(); r.time = time.into(); })
+    }
+    fn beat(time: &str, tool: &str, name: &str) -> AuditRecord {
+        rec(|r| { r.action = "heartbeat".into(); r.tool = tool.into(); r.name = name.into(); r.session = "s1".into(); r.time = time.into(); })
+    }
+    fn built(records: &[AuditRecord]) -> Project {
+        let mut p = Project::default();
+        for r in records { p.apply(r); }
+        p.finish();
+        p
+    }
+
+    #[test]
+    fn session_start_and_end_are_not_activity() {
+        let p = built(&[
+            agent_call("2026-01-02T03:05:49+00:00"),
+            rec(|r| { r.action = "session-start".into(); r.session = "s2".into(); r.time = "2026-01-02T03:47:38+00:00".into(); }),
+            rec(|r| { r.action = "session-end".into(); r.session = "s2".into(); r.time = "2026-01-02T03:47:56+00:00".into(); }),
+        ]);
+        assert_eq!(p.activity().map(|e| e.time.clone()), Some("2026-01-02T03:05:49+00:00".into()));
+    }
+
+    #[test]
+    fn newer_heartbeat_is_the_activity() {
+        let p = built(&[agent_call("2026-01-02T03:00:00+00:00"), beat("2026-01-02T03:10:00+00:00", "Read", "")]);
+        let a = p.activity().unwrap();
+        assert_eq!((a.time.as_str(), &a.kind), ("2026-01-02T03:10:00+00:00", &EventKind::Tool { who: "Uno".into(), tool: "Read".into() }));
+    }
+
+    #[test]
+    fn heartbeat_names_the_subagent() {
+        let p = built(&[beat("2026-01-02T03:10:00+00:00", "Grep", "core:codebase-explorer")]);
+        assert_eq!(p.activity().unwrap().kind, EventKind::Tool { who: "Beta".into(), tool: "Grep".into() });
+    }
+
+    #[test]
+    fn heartbeat_is_not_counted_or_listed() {
+        let p = built(&[beat("2026-01-02T03:10:00+00:00", "Read", "")]);
+        assert_eq!((p.events, p.per_day.len(), p.recent.len()), (0, 0, 0));
+        assert!(p.first.is_empty() && p.last.is_empty() && p.agents.is_empty() && p.blocked.is_empty());
+    }
+
+    #[test]
+    fn logged_event_wins_over_older_or_same_time_heartbeat() {
+        for t in ["2026-01-02T03:00:00+00:00", "2026-01-02T02:59:00+00:00"] {
+            let p = built(&[agent_call("2026-01-02T03:00:00+00:00"), beat(t, "Agent", "")]);
+            assert!(matches!(p.activity().unwrap().kind, EventKind::Agent { .. }), "{t}");
+        }
     }
 
     #[test]
