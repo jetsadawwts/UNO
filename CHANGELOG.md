@@ -2,6 +2,10 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.18 — 2026-11-27
+- **Hooks now work when the plugin folder's path has a space.** Every command in `hooks.json` used `python3 ${CLAUDE_PLUGIN_ROOT}/hooks/<hook>.py` without quotes. Claude Code in the Terminal installs plugins under `~/.claude/plugins/…` (no space), but the Claude app's local agent mode loads the plugin under `~/Library/Application Support/Claude/…`: the shell split the path, `python3` exited 2, and every hook — all eight guards included — failed there (Claude Code treats exit 2 as a block). The path is now quoted (`python3 "${CLAUDE_PLUGIN_ROOT}/hooks/<hook>.py"`), and so is the scanner path in `/core:portfolio-scan`. New `tests/test_hooks_json.py` runs every `hooks.json` command through a shell with the plugin under a folder named `Application Support` (12 cases); it runs in pre-commit.
+- **After updating:** `/plugin marketplace update uno` and update `core@uno` in Claude Code; in the Claude app, reload or re-add the UNO plugin so it picks up 0.5.18. Until then do not rely on UNO's guards inside the Claude app.
+
 ## v0.5.17 — 2026-11-27
 - **uno-report no longer looks at other processes, and launchd no longer restarts it.** CleanMyMac flagged the v0.5.15 binary as an infostealer: an unsigned-looking binary that starts at login, restarts itself when stopped, lists every process with `lsof`/`ps` and watches files in the home folder matches that pattern. An audit of the source and all 90 dependencies found no network client, no access to Keychain, browsers or credentials, and no commands other than `date` and `open` besides the removed `lsof`/`ps`. Changes:
   - Open sessions are now counted from UNO's own hook events: new hook `trace_session.py` (SessionStart / SessionEnd) writes `session-start` / `session-end` to `audit.log`; a session with no event for 30 minutes counts as closed. `lsof`/`ps` are gone.

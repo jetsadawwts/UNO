@@ -6,11 +6,11 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/guard_zones.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_zones.py\""
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/guard_plan.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_plan.py\""
           }
         ]
       },
@@ -19,23 +19,23 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/guard_secrets.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_secrets.py\""
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/guard_git.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_git.py\""
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/guard_plan.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_plan.py\""
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/guard_infra.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_infra.py\""
           },
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/guard_danger.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_danger.py\""
           }
         ]
       },
@@ -44,7 +44,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/trace_agents.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/trace_agents.py\""
           }
         ]
       },
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/guard_browser.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/guard_browser.py\""
           }
         ]
       }
@@ -63,7 +63,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/approve_on_prompt.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/approve_on_prompt.py\""
           }
         ]
       }
@@ -73,7 +73,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/trace_session.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/trace_session.py\""
           }
         ]
       }
@@ -83,7 +83,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${CLAUDE_PLUGIN_ROOT}/hooks/trace_session.py"
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/trace_session.py\""
           }
         ]
       }

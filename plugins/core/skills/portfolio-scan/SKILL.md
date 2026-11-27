@@ -12,7 +12,7 @@ Read-only triage of many repos so the CTO can decide the onboarding order. This 
 1. Ask for the parent folder if the user has not given it. Confirm it holds one repo per subfolder.
 2. Run the scanner:
    ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/skills/portfolio-scan/scripts/scan_portfolio.py <parent> \
+   python3 "${CLAUDE_PLUGIN_ROOT}/skills/portfolio-scan/scripts/scan_portfolio.py" <parent> \
      --out .uno/inventory.md --json .uno/projects.json
    ```
 3. Read `.uno/inventory.md` and report back in UNO's short format:
