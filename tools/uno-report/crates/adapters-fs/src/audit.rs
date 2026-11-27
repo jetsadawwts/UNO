@@ -23,6 +23,7 @@ pub fn parse_audit(text: &str) -> Vec<AuditRecord> {
                 session: s("session"),
                 state: s("state"),
                 since: s("since"),
+                version: s("version"),
             }
         })
         .collect()

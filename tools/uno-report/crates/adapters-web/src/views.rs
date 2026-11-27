@@ -80,8 +80,24 @@ fn live_line(l: &Live) -> String {
         other => (other.to_string(), other.to_string()),
     };
     let prefix = if l.task.is_empty() { l.who.clone() } else { format!("{} · {}", l.task, l.who) };
-    format!("<div class=\"lc-line\" data-time=\"{}\">{} · <span class=\"since\" data-since=\"{}\"></span></div>",
-            esc(&l.time), t(&format!("{prefix}: {en}"), &format!("{prefix}: {th}")), esc(&l.since))
+    format!("<div class=\"lc-line\" data-time=\"{}\">{} · <span class=\"since\" data-since=\"{}\"></span>{}</div>",
+            esc(&l.time), t(&format!("{prefix}: {en}"), &format!("{prefix}: {th}")), esc(&l.since), hook_version(&l.version))
+}
+
+/// This binary's version; released with the same number as the plugin.
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// The plugin version a session's hook reported, flagged when it is not this dashboard's.
+fn hook_version(v: &str) -> String {
+    if v.is_empty() {
+        return String::new();
+    }
+    let text = format!("hook v{}", esc(v));
+    if v == VERSION {
+        format!("<span class=\"hv\"> · {text}</span>")
+    } else {
+        format!("<span class=\"hv diff\"> · {text} · {}</span>", t("differs from dashboard", "ไม่ตรงกับ dashboard"))
+    }
 }
 
 /// Live team status. The page decides Working / Idle / Offline from `data-last`, `data-sessions`
@@ -283,7 +299,7 @@ pub enum PageMode {
 pub fn render_page(d: &app::Dashboard, m: &app::ports::ManualText, data_label: &str, mode: &PageMode) -> String {
     let watch = match mode { PageMode::File { watch } => *watch, PageMode::Live => None };
     let header = format!(
-        "<header><h1>{}UNO</h1><nav><button class=\"on\" data-v=\"dash\">{}{}</button><button data-v=\"manual\">{}{}</button></nav>\
+        "<header><h1>{}UNO <span class=\"ver\">dashboard v{VERSION}</span></h1><nav><button class=\"on\" data-v=\"dash\">{}{}</button><button data-v=\"manual\">{}{}</button></nav>\
          <div class=\"hright\"><span id=\"liveflag\" class=\"pill-btn\" hidden title=\"uno-report --serve\"><i class=\"ld\"></i><span class=\"l-on\">{}</span><span class=\"l-off\">{}</span></span><span id=\"reloadflag\" class=\"pill-btn\" hidden>{}{}</span>\
          <div id=\"lang\" role=\"group\" aria-label=\"Language\"><button data-l=\"en\">EN</button><button data-l=\"th\">TH</button></div>\
          <button id=\"theme\" title=\"Theme\"><span class=\"m-auto\">{}{}</span><span class=\"m-light\">{}{}</span><span class=\"m-dark\">{}{}</span></button>\

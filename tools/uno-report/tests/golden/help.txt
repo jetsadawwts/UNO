@@ -1,4 +1,4 @@
-uno-report [--data DIR] [--out FILE] [--manual FILE] [--open] [--watch MINUTES] [--serve [--port N]]
+uno-report [--data DIR] [--out FILE] [--manual FILE] [--open] [--watch MINUTES] [--serve [--port N]] [--version]
 
   default data: ~/UNO/data, out: <data>/uno-report.html
 

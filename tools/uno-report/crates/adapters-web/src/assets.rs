@@ -51,7 +51,7 @@ tr.go{cursor:pointer}tr.go:hover td{background:color-mix(in srgb,var(--c1) 7%,va
 .livecard.working .dot{background:var(--c2);box-shadow:0 0 0 4px color-mix(in srgb,var(--c2) 25%,transparent)}.livecard.working .st-working{display:inline-block;background:color-mix(in srgb,var(--c2) 20%,var(--card))}
 .livecard.open .dot{background:var(--c5)}.livecard.open .st-open{display:inline-block;background:color-mix(in srgb,var(--c5) 20%,var(--card))}
 .livecard.idle .st-idle{display:inline-block}
-.lc-line{margin-top:6px;font-size:14px}.lc-line.stale{display:none}.livecard.has-lines .lc-last{display:none}
+.lc-line{margin-top:6px;font-size:14px}.lc-line .hv{color:var(--muted);font-size:12px}.lc-line .hv.diff{color:var(--fg);background:color-mix(in srgb,#f59e0b 28%,transparent);border-radius:4px;padding:0 4px;margin-left:4px}header .ver{color:var(--muted);font-size:13px;font-weight:400;white-space:nowrap}.lc-line.stale{display:none}.livecard.has-lines .lc-last{display:none}
 .feed{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:10px}
 .feed li{display:flex;gap:12px;padding:7px 14px;border-bottom:1px solid var(--line);font-size:14px}.feed li:last-child{border-bottom:0}
 .feed .ago{color:var(--muted);width:110px;flex:none}.feed .fp{color:var(--c1);width:170px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

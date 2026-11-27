@@ -93,7 +93,7 @@ fn now() -> String {
     LocalClock.now()
 }
 
-const HELP: &str = "uno-report [--data DIR] [--out FILE] [--manual FILE] [--open] [--watch MINUTES] [--serve [--port N]]\n\
+const HELP: &str = "uno-report [--data DIR] [--out FILE] [--manual FILE] [--open] [--watch MINUTES] [--serve [--port N]] [--version]\n\
                     \n  default data: ~/UNO/data, out: <data>/uno-report.html\n\
                     \n  manual: <data>/manual.md (English) and <data>/manual.th.md (Thai, optional)\n\
                     \n  --watch N  regenerate every N minutes until stopped (Ctrl+C)\n\
@@ -120,6 +120,8 @@ struct Cli {
     port: Option<String>,
     #[arg(short = 'h', long = "help")]
     help: bool,
+    #[arg(short = 'V', long = "version")]
+    version: bool,
 }
 
 /// Make argv look like what v0.5.12 accepted before clap sees it: unknown arguments are
@@ -127,7 +129,7 @@ struct Cli {
 /// (v0.5.12 read the first value; clap rejects repeats). Value flags take the next argument.
 fn known_args(args: impl Iterator<Item = String>) -> Vec<String> {
     const VALUE: &[&str] = &["--data", "--out", "--manual", "--watch", "--port"];
-    const SWITCH: &[&str] = &["--open", "--serve", "--help", "-h"];
+    const SWITCH: &[&str] = &["--open", "--serve", "--help", "-h", "--version", "-V"];
     let mut args = args;
     let mut out: Vec<String> = args.next().into_iter().collect();
     let mut seen: Vec<String> = Vec::new();
@@ -152,6 +154,10 @@ fn main() {
     let cli = Cli::parse_from(known_args(env::args()));
     if cli.help {
         println!("{HELP}");
+        return;
+    }
+    if cli.version {
+        println!("uno-report {}", env!("CARGO_PKG_VERSION"));
         return;
     }
     let home = env::var("HOME").unwrap_or_default();

@@ -18,6 +18,8 @@ pub struct AuditRecord {
     /// Heartbeat only: running, between, waiting, done or error, and since when.
     pub state: String,
     pub since: String,
+    /// Heartbeat only: version of the plugin whose hook wrote it.
+    pub version: String,
 }
 
 /// What one session is doing now, from its heartbeat file.
@@ -30,6 +32,7 @@ pub struct Live {
     pub who: String,
     pub tool: String,
     pub task: String,
+    pub version: String,
 }
 
 /// What an activity-feed entry says happened. Text for people is made by the views.

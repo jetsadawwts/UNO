@@ -286,7 +286,9 @@ def main():
     secret = {"command": "echo SECRET-CMD", "file_path": "/x/SECRET-PATH"}
     outputs = [beat("h-1", "UserPromptSubmit", prompt="SECRET-PROMPT")]
     check("state: prompt → between, task from branch", seen("h-1", "state", "tool", "task"), ("between", "", "T7"))
-    check("state: fields", sorted(beat_file("h-1")), ["action", "name", "session", "since", "state", "task", "time", "tool"])
+    check("state: fields", sorted(beat_file("h-1")), ["action", "name", "session", "since", "state", "task", "time", "tool", "version"])
+    manifest = json.load(open(os.path.join(HOOKS, "..", ".claude-plugin", "plugin.json"), encoding="utf-8"))
+    check("state: records the plugin version that ran", beat_file("h-1").get("version"), manifest["version"])
     outputs.append(beat("h-1", "PreToolUse", tool_name="Bash", tool_input=secret))
     check("state: before a tool → running", seen("h-1", "action", "session", "state", "tool", "name"), ("heartbeat", "h-1", "running", "Bash", ""))
     outputs.append(beat("h-1", "PostToolUse", tool_name="Bash", tool_input=secret, tool_response="SECRET-OUT"))

@@ -152,6 +152,32 @@ mod tests {
         assert!(card.contains("Beta: running &lt;b&gt;") && !card.contains("<b>:") && !card.contains(" · Beta"), "{card}");
     }
 
+    fn card_with_hook_version(version: &str) -> String {
+        let mut p = domain::Project { name: "x".into(), sessions: 1, ..Default::default() };
+        p.apply(&AuditRecord { action: "heartbeat".into(), session: "s".into(), time: "2026-01-02T03:10:00+00:00".into(), since: "2026-01-02T03:09:00+00:00".into(), state: "between".into(), version: version.into(), ..Default::default() });
+        p.finish();
+        crate::views::activity_panel(&[&p], true)
+    }
+
+    #[test]
+    fn card_line_shows_the_hook_version() {
+        let same = card_with_hook_version(env!("CARGO_PKG_VERSION"));
+        assert!(same.contains(&format!("<span class=\"hv\"> · hook v{}</span>", env!("CARGO_PKG_VERSION"))), "{same}");
+        assert!(!same.contains("differs from dashboard"), "{same}");
+    }
+
+    #[test]
+    fn card_line_flags_a_hook_version_that_differs() {
+        let card = card_with_hook_version("0.0.1<");
+        assert!(card.contains("class=\"hv diff\"") && card.contains("hook v0.0.1&lt;"), "{card}");
+        assert!(card.contains("differs from dashboard") && card.contains("ไม่ตรงกับ dashboard"), "{card}");
+    }
+
+    #[test]
+    fn card_line_without_a_hook_version_shows_none() {
+        assert!(!card_with_hook_version("").contains("hook v"));
+    }
+
     #[test]
     fn message_escapes_quotes_newlines_and_thai() {
         let mut p = Panes { panes: BTreeMap::new(), meta: "a\"b\\c\nกข\u{1}".into() };

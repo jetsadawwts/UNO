@@ -21,7 +21,8 @@ fn golden_file_output_matches() {
     let data = fixture();
     let o = run(&["--data", data.to_str().unwrap(), "--out", out.to_str().unwrap()]);
     assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
-    let got = std::fs::read_to_string(&out).unwrap().replace(data.to_str().unwrap(), "<DATA>");
+    let got = std::fs::read_to_string(&out).unwrap().replace(data.to_str().unwrap(), "<DATA>")
+        .replace(concat!("dashboard v", env!("CARGO_PKG_VERSION")), "dashboard v<VERSION>");
     let _ = std::fs::remove_file(&out);
     assert_eq!(got, include_str!("golden/report.html"));
 }

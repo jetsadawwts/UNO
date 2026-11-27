@@ -2,7 +2,7 @@
 """Hook for the dashboard's live team activity: what is each session doing right now?
 
 On every state change it overwrites .uno/heartbeat/<session>.json with the time, session id,
-state, since when, tool name, agent id and the task id from the branch name. It never stores
+state, since when, tool name, agent id, the task id from the branch name and the plugin version. It never stores
 commands, paths, prompts, messages, branch names or content. Kept out of audit.log so that log
 does not grow. Only active in onboarded projects (`.uno/` exists).
 
@@ -41,6 +41,11 @@ def branch_task(root):
         return ""
     m = TASK_RE.search(r.stdout.strip()) if r.returncode == 0 else None
     return m.group(1).upper() if m else ""
+
+
+def plugin_version():
+    manifest = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".claude-plugin", "plugin.json")
+    return str(previous(manifest).get("version") or "")[:20]
 
 
 def previous(path):
@@ -94,7 +99,7 @@ def record(event):
     same = (old.get("state"), old.get("tool")) == (state, tool)
     entry = {"time": stamp, "session": session, "action": "heartbeat", "state": state,
              "since": old.get("since", stamp) if same else stamp,
-             "tool": tool, "name": str(agent or "")[:80], "task": task}
+             "tool": tool, "name": str(agent or "")[:80], "task": task, "version": plugin_version()}
     os.makedirs(folder, exist_ok=True)
     tmp = f"{path}.{os.getpid()}.tmp"
     with open(tmp, "w", encoding="utf-8") as fh:

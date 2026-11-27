@@ -64,7 +64,7 @@ impl Project {
             }
             if !r.time.is_empty() && !r.session.is_empty() && !r.state.is_empty() {
                 let who = if r.name.is_empty() { "Uno".to_string() } else { agent_name(&r.name) };
-                self.live.push(Live { session: r.session.clone(), time: r.time.clone(), since: r.since.clone(), state: r.state.clone(), who, tool: clip(&r.tool, 60), task: clip(&r.task, 12) });
+                self.live.push(Live { session: r.session.clone(), time: r.time.clone(), since: r.since.clone(), state: r.state.clone(), who, tool: clip(&r.tool, 60), task: clip(&r.task, 12), version: clip(&r.version, 20) });
             }
             return;
         }

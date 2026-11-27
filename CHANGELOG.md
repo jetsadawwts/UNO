@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.21 — 2026-11-27
+- **The dashboard shows versions.** It was not possible to tell which update was running.
+  - The header shows `dashboard v0.5.21`, the version of the running `uno-report`; `uno-report --version` (`-V`) prints it.
+  - Each live line on the team activity card ends with `hook v0.5.21`: the plugin version of the hook that session is running (`trace_heartbeat.py` reads it from its own `plugin.json` and adds `version` to the heartbeat). When it differs from the dashboard's it is highlighted with "differs from dashboard".
+  - `uno-report` now has the same version as the plugin (was always 0.1.0). To release, change both `plugins/core/.claude-plugin/plugin.json` and `[workspace.package]` in `tools/uno-report/Cargo.toml`, then run `cargo update -w --offline` there for `Cargo.lock`; `tests/version.rs` fails when the two numbers differ.
+- **Limits:** the hook version appears only on live lines. Sessions on v0.5.20 hooks show a line without it; older hooks send no live line. It is not read from the installed-plugin list (`claude plugin list` shows that).
+- **After updating:** in Claude Code `/plugin marketplace update uno`, update `core@uno`, and restart open Claude Code sessions; then stop `uno-report --serve`, `cargo install --path ~/UNO/uno/tools/uno-report --force --locked`, and start it again.
+
 ## v0.5.20 — 2026-11-27
 - **The team activity card shows what each session is doing now, with the task id.** v0.5.19 showed the last tool, at most once a minute. The card now has one line per open session, for example `T38 · Uno: running Bash · 12 s`, with the states running a tool, working (between tools), waiting for you, turn finished and stopped by an error; the duration counts up in the browser.
   - `trace_heartbeat.py` now runs on UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, Notification, Stop, StopFailure and SessionEnd, and writes on every state change (no throttle). It prints nothing and exits 0, so it never decides a permission or blocks a tool.

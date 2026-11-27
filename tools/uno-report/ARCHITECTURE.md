@@ -42,7 +42,7 @@ browser ◄── /ws: {"sig","panes":{changed only},"meta"} or {"sig","reload":
 - `tests/e2e_live.py` (Playwright, run by hand) checks the whole loop.
 
 ## Open sessions
-UNO's `trace_session.py` hook writes `session-start` / `session-end` to the project's `audit.log`, and every hook event carries the session id. `trace_heartbeat.py` also overwrites `heartbeat/<session>.json` on every state change (state, since, tool, agent id, task id from the branch name) and removes it on SessionEnd; `FsStore` reads these with the audit records (action `heartbeat`). They feed the session count, the activity card (`Project::activity`) and its live lines (`Project::live`, one per session, dropped after that session's `session-end`), never counts or the feed. The page counts each line's duration itself and hides lines older than 30 minutes. Session start and end are not activity. A session counts as open when its latest event is not `session-end` and is at most 30 minutes old (`SESSION_IDLE_SECS`: Claude Code can exit without running SessionEnd). uno-report does not look at other processes on the machine.
+UNO's `trace_session.py` hook writes `session-start` / `session-end` to the project's `audit.log`, and every hook event carries the session id. `trace_heartbeat.py` also overwrites `heartbeat/<session>.json` on every state change (state, since, tool, agent id, task id from the branch name) and removes it on SessionEnd; `FsStore` reads these with the audit records (action `heartbeat`). They feed the session count, the activity card (`Project::activity`) and its live lines (`Project::live`, one per session, dropped after that session's `session-end`), never counts or the feed. The page counts each line's duration itself and hides lines older than 30 minutes. Each heartbeat also carries the hook's plugin version, shown on its line and flagged when it differs from the binary's. Session start and end are not activity. A session counts as open when its latest event is not `session-end` and is at most 30 minutes old (`SESSION_IDLE_SECS`: Claude Code can exit without running SessionEnd). uno-report does not look at other processes on the machine.
 
 ## Rules
 - `domain` and `app` never do I/O. Anything that touches the machine is an adapter.
@@ -55,6 +55,7 @@ UNO's `trace_session.py` hook writes `session-start` / `session-end` to the proj
 3. Choose it in `src/main.rs`.
 
 ## Build
+- One version with the plugin: `[workspace.package] version` here must equal `plugins/core/.claude-plugin/plugin.json` (`tests/version.rs`). After changing it run `cargo update -w --offline` for `Cargo.lock`.
 - Rust 1.91 or newer (`rust-version` in `Cargo.toml`). Install with `cargo install --path tools/uno-report --force --locked` so `Cargo.lock` is used.
 
 ## Tests
