@@ -18,8 +18,8 @@ use std::time::Duration;
 use clap::Parser;
 
 use adapters_file::write_atomic;
-use adapters_fs::{manual_stamp, FsChangeFeed, FsManual, FsStore};
-use adapters_os::{LsofSessions, SystemClock};
+use adapters_fs::{manual_stamp, AuditSessions, FsChangeFeed, FsManual, FsStore};
+use adapters_os::SystemClock;
 use adapters_web::{render_page, PageMode, Server};
 use app::ports::{ChangeFeed, Clock, ManualSource, SessionProbe};
 
@@ -39,18 +39,19 @@ impl Clock for LocalClock {
         env::var("UNO_REPORT_FAKE_NOW").unwrap_or_else(|_| SystemClock.now())
     }
 }
-struct LocalSessions;
+/// Open sessions from the data folder's audit events (`AuditSessions`), or the test seam.
+struct LocalSessions(PathBuf);
 impl SessionProbe for LocalSessions {
     fn open_sessions(&self) -> Option<BTreeMap<String, usize>> {
         match env::var("UNO_REPORT_FAKE_SESSIONS") {
             Ok(v) => fake_sessions(&v),
-            Err(_) => LsofSessions.open_sessions(),
+            Err(_) => AuditSessions { root: self.0.clone() }.open_sessions(),
         }
     }
 }
 
 fn build(data: &Path, out: &Path, manual_path: &Path, watch: Option<u64>) -> Result<usize, String> {
-    let d = app::build_dashboard(&FsStore { root: data.to_path_buf() }, &LocalSessions, &LocalClock)?;
+    let d = app::build_dashboard(&FsStore { root: data.to_path_buf() }, &LocalSessions(data.to_path_buf()), &LocalClock)?;
     let m = FsManual { en_path: manual_path.to_path_buf() }.manual();
     write_atomic(out, &render_page(&d, &m, &data.display().to_string(), &PageMode::File { watch }))?;
     Ok(d.projects.len())
@@ -81,7 +82,7 @@ fn spawn_watcher(data: PathBuf, manual_path: PathBuf, tx: tokio::sync::watch::Se
         };
         let mut watch = app::Watch::new();
         loop {
-            if let Some(sig) = watch.step(feed.as_ref(), &store, &manual_stamp(&manual_path), &LocalSessions, TICK) {
+            if let Some(sig) = watch.step(feed.as_ref(), &store, &manual_stamp(&manual_path), &LocalSessions(data.clone()), TICK) {
                 tx.send_replace(sig);
             }
         }
@@ -167,7 +168,7 @@ fn main() {
             port,
             store: FsStore { root: data.clone() },
             manual: FsManual { en_path: manual_path },
-            sessions: LocalSessions,
+            sessions: LocalSessions(data.clone()),
             clock: LocalClock,
             data_label: data.display().to_string(),
             manual_stamp: move || manual_stamp(&stamp_path),

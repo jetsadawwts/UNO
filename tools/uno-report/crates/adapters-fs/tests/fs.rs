@@ -99,3 +99,33 @@ fn manual_falls_back_when_th_missing() {
     assert!(!manual_stamp(&d.join("manual.md")).is_empty());
     std::fs::remove_dir_all(d).unwrap();
 }
+
+#[test]
+fn parse_audit_reads_session_id() {
+    let r = parse_audit("{\"time\":\"t\",\"session\":\"abc\",\"action\":\"session-start\"}\n");
+    assert_eq!((r[0].session.as_str(), r[0].action.as_str()), ("abc", "session-start"));
+}
+
+#[test]
+fn audit_sessions_counts_open_sessions_per_project() {
+    let d = temp("sess");
+    for p in ["alpha", "beta", "_old"] {
+        std::fs::create_dir_all(d.join(p)).unwrap();
+    }
+    let line = |t: &str, s: &str, a: &str| format!("{{\"time\":\"{t}\",\"session\":\"{s}\",\"action\":\"{a}\"}}\n");
+    std::fs::write(d.join("alpha/audit.log"), line("2026-11-27T02:50:00+00:00", "a1", "session-start")
+        + &line("2026-11-27T02:55:00+00:00", "a2", "session-start") + &line("2026-11-27T02:56:00+00:00", "a2", "session-end")).unwrap();
+    std::fs::write(d.join("beta/audit.log"), line("2026-11-27T01:00:00+00:00", "b1", "session-start")).unwrap();
+    std::fs::write(d.join("_old/audit.log"), line("2026-11-27T02:59:00+00:00", "o1", "session-start")).unwrap();
+    let now = domain::parse_time("2026-11-27T03:00:00+00:00").unwrap();
+    let m = sessions_at(&d, now);
+    assert_eq!(m, std::collections::BTreeMap::from([("alpha".to_string(), 1)]));
+    std::fs::remove_dir_all(d).unwrap();
+}
+
+#[test]
+fn audit_sessions_probe_always_knows() {
+    use app::ports::SessionProbe;
+    let m = AuditSessions { root: PathBuf::from("/nonexistent-uno") }.open_sessions();
+    assert_eq!(m, Some(std::collections::BTreeMap::new()));
+}

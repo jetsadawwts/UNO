@@ -2,6 +2,14 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.17 — 2026-11-27
+- **uno-report no longer looks at other processes, and launchd no longer restarts it.** CleanMyMac flagged the v0.5.15 binary as an infostealer: an unsigned-looking binary that starts at login, restarts itself when stopped, lists every process with `lsof`/`ps` and watches files in the home folder matches that pattern. An audit of the source and all 90 dependencies found no network client, no access to Keychain, browsers or credentials, and no commands other than `date` and `open` besides the removed `lsof`/`ps`. Changes:
+  - Open sessions are now counted from UNO's own hook events: new hook `trace_session.py` (SessionStart / SessionEnd) writes `session-start` / `session-end` to `audit.log`; a session with no event for 30 minutes counts as closed. `lsof`/`ps` are gone.
+  - `launchd/com.uno.report.plist` keeps `RunAtLoad` but drops `KeepAlive`; starting at login stays optional, and the manual now suggests running `uno-report --serve` in a Terminal tab.
+  - The socket limit no longer uses `fetch_update` (deprecated in newer Rust).
+  - Hook tests: 155 (new `trace_session` cases).
+- **After updating:** in Claude Code `/plugin marketplace update uno` and update `core@uno` (the new hook runs in sessions started afterwards), then `cargo install --path ~/UNO/uno/tools/uno-report --force --locked`, and scan `~/.cargo/bin/uno-report` with CleanMyMac before starting it.
+
 ## v0.5.16 — 2026-11-27
 - **`uno-report` needs Rust 1.91 or newer, and installs with `--locked`.** Since v0.5.13–0.5.15 its dependencies need a newer Rust than some machines have (`clap` 4.6 uses edition 2024, `notify-types` 2.3 needs 1.91); on Rust 1.84 `cargo install` stopped with ``feature `edition2024` is required``. `tools/uno-report` now declares `rust-version = "1.91"` (on Rust 1.85–1.90 cargo now says which version is needed), and every install command uses `--locked` so the dependency versions that passed the tests are the ones built.
 - **After updating:** `rustc --version` (must be 1.91+; if not: `rustup update stable`, or `brew upgrade rust` for a Homebrew Rust) → `launchctl unload ~/Library/LaunchAgents/com.uno.report.plist` → `cargo install --path ~/UNO/uno/tools/uno-report --force --locked` → `launchctl load ~/Library/LaunchAgents/com.uno.report.plist`.

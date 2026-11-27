@@ -13,6 +13,8 @@ pub struct AuditRecord {
     pub file: String,
     pub name: String,
     pub description: String,
+    /// Claude Code session id, when the hook knew it.
+    pub session: String,
 }
 
 /// What an activity-feed entry says happened. Text for people is made by the views.

@@ -241,6 +241,29 @@ def main():
                        stdin=subprocess.DEVNULL, env=CLEAN_ENV)
     check("approve script: incomplete plan refused", r.returncode, 1)
 
+    # trace_session: SessionStart / SessionEnd become audit events the dashboard counts
+    log = os.path.join(repo, ".uno", "audit.log")
+    def last_event():
+        with open(log, encoding="utf-8") as fh:
+            return json.loads(fh.read().splitlines()[-1])
+    rc, _ = hook("trace_session.py", {"hook_event_name": "SessionStart", "session_id": "s-1", "source": "startup"}, repo)
+    e = last_event()
+    check("trace_session: start exits 0", rc, 0)
+    check("trace_session: start recorded", (e.get("action"), e.get("session"), e.get("source")), ("session-start", "s-1", "startup"))
+    check("trace_session: start has a time", bool(e.get("time")), True)
+    rc, _ = hook("trace_session.py", {"hook_event_name": "SessionEnd", "session_id": "s-1", "reason": "prompt_input_exit"}, repo)
+    e = last_event()
+    check("trace_session: end recorded", (rc, e.get("action"), e.get("session"), e.get("reason")), (0, "session-end", "s-1", "prompt_input_exit"))
+    bare = os.path.join(tmp, "bare")
+    os.makedirs(bare)
+    rc, _ = hook("trace_session.py", {"hook_event_name": "SessionStart", "session_id": "s-2"}, bare)
+    check("trace_session: no .uno → nothing written", (rc, os.path.exists(os.path.join(bare, ".uno"))), (0, False))
+    rc, _ = hook("trace_session.py", {"hook_event_name": "Other", "session_id": "s-3"}, repo)
+    check("trace_session: other events ignored", (rc, last_event().get("session")), (0, "s-1"))
+    r = subprocess.run([sys.executable, os.path.join(HOOKS, "trace_session.py")], input="not json",
+                       capture_output=True, text=True, env=CLEAN_ENV)
+    check("trace_session: bad input exits 0", r.returncode, 0)
+
     shutil.rmtree(tmp, ignore_errors=True)
     failed = [r for r in results if not r[1]]
     for label, ok, got, want in results:

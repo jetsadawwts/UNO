@@ -20,6 +20,7 @@ pub fn parse_audit(text: &str) -> Vec<AuditRecord> {
                 file: s("file"),
                 name: s("name"),
                 description: s("description"),
+                session: s("session"),
             }
         })
         .collect()

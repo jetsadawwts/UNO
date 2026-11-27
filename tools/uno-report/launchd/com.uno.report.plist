@@ -11,7 +11,6 @@
   <key>EnvironmentVariables</key>
   <dict><key>HOME</key><string>/Users/jetsadawwts</string><key>PATH</key><string>/usr/bin:/bin:/usr/sbin:/sbin</string></dict>
   <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
   <key>StandardOutPath</key><string>/tmp/uno-report.log</string>
   <key>StandardErrorPath</key><string>/tmp/uno-report.log</string>
 </dict>

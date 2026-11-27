@@ -4,7 +4,7 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 publish = false
-description = "uno-report adapter: open Claude Code sessions (lsof + ps, macOS) and the system clock."
+description = "uno-report adapter: the system clock."
 
 [dependencies]
 app = { path = "../app" }

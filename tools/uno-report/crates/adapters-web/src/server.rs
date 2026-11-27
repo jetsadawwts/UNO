@@ -166,8 +166,10 @@ where
             return plain(StatusCode::FORBIDDEN, "forbidden");
         }
     }
-    let taken = sh.sockets.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| (n < MAX_SOCKETS).then_some(n + 1));
-    if taken.is_err() {
+    // fetch_add + undo instead of fetch_update (deprecated in newer Rust, its replacement is
+    // not in Rust 1.91): the count may briefly exceed the limit, never the open sockets.
+    if sh.sockets.fetch_add(1, Ordering::SeqCst) >= MAX_SOCKETS {
+        sh.sockets.fetch_sub(1, Ordering::SeqCst);
         return plain(StatusCode::SERVICE_UNAVAILABLE, "too many live pages");
     }
     up.on_upgrade(move |ws| async move {

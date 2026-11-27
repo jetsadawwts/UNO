@@ -10,7 +10,7 @@ it does not depend on.
                  └──────┬──────────────┬───────────────┬──────────────┬───────────┘
                         ▼              ▼               ▼              ▼
                   adapters-fs     adapters-os     adapters-web    adapters-file
-                  ~/UNO/data      lsof/ps, date   views, server   write HTML file
+                  ~/UNO/data      date            views, server   write HTML file
                         │              │               │
                         └──────► app (ports + use cases) ◄┘
                                        │
@@ -20,10 +20,10 @@ it does not depend on.
 
 | Crate | Owns | Depends on |
 |---|---|---|
-| `domain` | `Project`, `Task`, `AuditRecord`, `Event`/`EventKind`, counting rules (`Project::apply`, `finish`), agent names | std only |
+| `domain` | `Project`, `Task`, `AuditRecord`, `Event`/`EventKind`, counting rules (`Project::apply`, `finish`), agent names, `open_sessions`, `parse_time` | std only |
 | `app` | ports `ProjectStore`, `ManualSource`, `SessionProbe`, `Clock`, `ChangeFeed`; use cases `build_dashboard`, `signature`, `Watch` | `domain` |
-| `adapters-fs` | `FsStore` (project folders, `audit.log`, `tasks.md`), `FsManual`, `manual_stamp`, parsers, `FsChangeFeed` (notify) | `app`, `domain`, `serde_json`, `notify` |
-| `adapters-os` | `LsofSessions` (macOS), `SystemClock`, `count_sessions` | `app` |
+| `adapters-fs` | `FsStore` (project folders, `audit.log`, `tasks.md`), `FsManual`, `manual_stamp`, parsers, `FsChangeFeed` (notify), `AuditSessions` (open sessions from audit events) | `app`, `domain`, `serde_json`, `notify` |
+| `adapters-os` | `SystemClock` | `app` |
 | `adapters-web` | `render_page`, `PageMode`, `manual_html`, `render_panes`, `diff_message`, charts, CSS/JS, `Server` (axum: 127.0.0.1, Host check, GET only, `/ws`) | `app`, `domain`, `pulldown-cmark`, `serde_json`, `tokio`, `axum` |
 | `adapters-file` | `write_atomic` | std only |
 | root | `Cli`, wiring, `LocalClock`/`LocalSessions` (honour `UNO_REPORT_FAKE_NOW` / `UNO_REPORT_FAKE_SESSIONS`), watcher thread, tokio runtime for `--serve` | all of the above, `clap`, `tokio` |
@@ -31,7 +31,7 @@ it does not depend on.
 ## Live updates (`--serve`)
 ```
 FsChangeFeed (notify, 300 ms debounce) ──┐
-every 5 s (session counts) ──────────────┴─► Watch::step → new signature ─► tokio watch channel
+every 5 s (session expiry) ──────────────┴─► Watch::step → new signature ─► tokio watch channel
                                                                                 │
 browser ◄── /ws: {"sig","panes":{changed only},"meta"} or {"sig","reload":true} ◄┘ per socket
 ```
@@ -40,6 +40,9 @@ browser ◄── /ws: {"sig","panes":{changed only},"meta"} or {"sig","reload":
 - Reads are not changes: the watcher ignores `Access` events (rendering opens every file), `uno-report.html`, `*.tmp` and `trash/`.
 - Safety: 127.0.0.1 only; Host checked on every route; `/ws` refuses a foreign `Origin`; at most 8 sockets; the server never acts on what the browser sends.
 - `tests/e2e_live.py` (Playwright, run by hand) checks the whole loop.
+
+## Open sessions
+UNO's `trace_session.py` hook writes `session-start` / `session-end` to the project's `audit.log`, and every hook event carries the session id. A session counts as open when its latest event is not `session-end` and is at most 30 minutes old (`SESSION_IDLE_SECS`: Claude Code can exit without running SessionEnd). uno-report does not look at other processes on the machine.
 
 ## Rules
 - `domain` and `app` never do I/O. Anything that touches the machine is an adapter.
