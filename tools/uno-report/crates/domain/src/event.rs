@@ -15,6 +15,21 @@ pub struct AuditRecord {
     pub description: String,
     /// Claude Code session id, when the hook knew it.
     pub session: String,
+    /// Heartbeat only: running, between, waiting, done or error, and since when.
+    pub state: String,
+    pub since: String,
+}
+
+/// What one session is doing now, from its heartbeat file.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Live {
+    pub session: String,
+    pub time: String,
+    pub since: String,
+    pub state: String,
+    pub who: String,
+    pub tool: String,
+    pub task: String,
 }
 
 /// What an activity-feed entry says happened. Text for people is made by the views.

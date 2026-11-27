@@ -126,6 +126,32 @@ mod tests {
         assert!(!card.contains("03:47:56"), "{card}");
     }
 
+    fn card_for(state: &str, tool: &str, task: &str, name: &str) -> String {
+        let mut p = domain::Project { name: "x".into(), sessions: 1, ..Default::default() };
+        p.apply(&AuditRecord { action: "heartbeat".into(), session: "s".into(), time: "2026-01-02T03:10:00+00:00".into(), since: "2026-01-02T03:09:00+00:00".into(), state: state.into(), tool: tool.into(), task: task.into(), name: name.into(), ..Default::default() });
+        p.finish();
+        crate::views::activity_panel(&[&p], true)
+    }
+
+    #[test]
+    fn card_shows_what_each_session_is_doing() {
+        for (state, en, th) in [("running", "running Bash", "กำลังรัน Bash"), ("between", "working", "กำลังทำงาน"),
+                                ("waiting", "waiting for you", "รอคุณตอบ"), ("done", "turn finished", "ตอบรอบนั้นเสร็จ"),
+                                ("error", "stopped by an error", "หยุดเพราะ error")] {
+            let card = card_for(state, "Bash", "T38", "");
+            assert!(card.contains(&format!("T38 · Uno: {en}")), "{state}: {card}");
+            assert!(card.contains(&format!("T38 · Uno: {th}")), "{state}: {card}");
+            assert!(card.contains("class=\"lc-line\" data-time=\"2026-01-02T03:10:00+00:00\""), "{card}");
+            assert!(card.contains("class=\"since\" data-since=\"2026-01-02T03:09:00+00:00\""), "{card}");
+        }
+    }
+
+    #[test]
+    fn card_without_task_has_no_prefix_and_escapes_values() {
+        let card = card_for("running", "<b>", "", "core:codebase-explorer");
+        assert!(card.contains("Beta: running &lt;b&gt;") && !card.contains("<b>:") && !card.contains(" · Beta"), "{card}");
+    }
+
     #[test]
     fn message_escapes_quotes_newlines_and_thai() {
         let mut p = Panes { panes: BTreeMap::new(), meta: "a\"b\\c\nกข\u{1}".into() };

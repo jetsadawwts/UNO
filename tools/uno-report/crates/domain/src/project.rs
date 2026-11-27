@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{agent_name, clip, is_open, AuditRecord, Event, EventKind, Task, RECENT_KEEP};
+use crate::{agent_name, clip, is_open, AuditRecord, Event, EventKind, Live, Task, RECENT_KEEP};
 
 /// Everything the dashboard shows about one project folder in `~/UNO/data`.
 #[derive(Default)]
@@ -22,6 +22,10 @@ pub struct Project {
     pub recent: Vec<Event>,
     /// Newest heartbeat, if any.
     pub beat: Option<Event>,
+    /// One entry per session with a heartbeat state, newest first.
+    pub live: Vec<Live>,
+    /// Latest `session-end` time by session id.
+    pub ended: BTreeMap<String, String>,
     pub sessions: usize,
     pub tasks: Vec<Task>,
 }
@@ -58,9 +62,16 @@ impl Project {
                 let who = if r.name.is_empty() { "Uno".to_string() } else { agent_name(&r.name) };
                 self.beat = Some(Event { time: r.time.clone(), kind: EventKind::Tool { who, tool: clip(&r.tool, 60) } });
             }
+            if !r.time.is_empty() && !r.session.is_empty() && !r.state.is_empty() {
+                let who = if r.name.is_empty() { "Uno".to_string() } else { agent_name(&r.name) };
+                self.live.push(Live { session: r.session.clone(), time: r.time.clone(), since: r.since.clone(), state: r.state.clone(), who, tool: clip(&r.tool, 60), task: clip(&r.task, 12) });
+            }
             return;
         }
         self.events += 1;
+        if r.action == "session-end" && r.time > *self.ended.entry(r.session.clone()).or_default() {
+            self.ended.insert(r.session.clone(), r.time.clone());
+        }
         let time = &r.time;
         let day: String = time.chars().take(10).collect();
         if !time.is_empty() {
@@ -116,6 +127,9 @@ impl Project {
 
     /// Newest events first, at most [`RECENT_KEEP`].
     pub fn finish(&mut self) {
+        let ended = &self.ended;
+        self.live.retain(|l| ended.get(&l.session).is_none_or(|end| *end < l.time));
+        self.live.sort_by(|a, b| b.time.cmp(&a.time));
         self.recent.sort_by(|a, b| b.time.cmp(&a.time));
         self.recent.truncate(RECENT_KEEP);
     }
@@ -180,6 +194,33 @@ mod tests {
             let p = built(&[agent_call("2026-01-02T03:00:00+00:00"), beat(t, "Agent", "")]);
             assert!(matches!(p.activity().unwrap().kind, EventKind::Agent { .. }), "{t}");
         }
+    }
+
+    fn live(session: &str, time: &str, state: &str, task: &str) -> AuditRecord {
+        rec(|r| { r.action = "heartbeat".into(); r.session = session.into(); r.time = time.into(); r.since = time.into(); r.state = state.into(); r.tool = "Bash".into(); r.task = task.into(); })
+    }
+
+    #[test]
+    fn each_session_has_its_own_live_entry_newest_first() {
+        let p = built(&[live("a", "2026-01-02T03:00:00+00:00", "running", "T38"), live("b", "2026-01-02T03:01:00+00:00", "waiting", "")]);
+        let got: Vec<_> = p.live.iter().map(|l| (l.session.as_str(), l.state.as_str(), l.task.as_str(), l.who.as_str(), l.tool.as_str())).collect();
+        assert_eq!(got, [("b", "waiting", "", "Uno", "Bash"), ("a", "running", "T38", "Uno", "Bash")]);
+        assert_eq!((p.events, p.recent.len()), (0, 0));
+    }
+
+    #[test]
+    fn ended_session_has_no_live_entry_unless_it_came_back() {
+        let end = |t: &str| rec(|r| { r.action = "session-end".into(); r.session = "a".into(); r.time = t.into(); });
+        let gone = built(&[end("2026-01-02T03:05:00+00:00"), live("a", "2026-01-02T03:00:00+00:00", "running", "")]);
+        assert!(gone.live.is_empty());
+        let back = built(&[end("2026-01-02T03:05:00+00:00"), live("a", "2026-01-02T03:06:00+00:00", "running", "")]);
+        assert_eq!(back.live.len(), 1);
+    }
+
+    #[test]
+    fn heartbeat_without_state_has_no_live_entry() {
+        let p = built(&[beat("2026-01-02T03:10:00+00:00", "Read", "")]);
+        assert!(p.live.is_empty() && p.beat.is_some());
     }
 
     #[test]

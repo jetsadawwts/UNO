@@ -51,6 +51,7 @@ tr.go{cursor:pointer}tr.go:hover td{background:color-mix(in srgb,var(--c1) 7%,va
 .livecard.working .dot{background:var(--c2);box-shadow:0 0 0 4px color-mix(in srgb,var(--c2) 25%,transparent)}.livecard.working .st-working{display:inline-block;background:color-mix(in srgb,var(--c2) 20%,var(--card))}
 .livecard.open .dot{background:var(--c5)}.livecard.open .st-open{display:inline-block;background:color-mix(in srgb,var(--c5) 20%,var(--card))}
 .livecard.idle .st-idle{display:inline-block}
+.lc-line{margin-top:6px;font-size:14px}.lc-line.stale{display:none}.livecard.has-lines .lc-last{display:none}
 .feed{list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:10px}
 .feed li{display:flex;gap:12px;padding:7px 14px;border-bottom:1px solid var(--line);font-size:14px}.feed li:last-child{border-bottom:0}
 .feed .ago{color:var(--muted);width:110px;flex:none}.feed .fp{color:var(--c1);width:170px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -107,7 +108,14 @@ bindDyn();
 function ago(iso){var t=Date.parse(iso);if(isNaN(t))return '';var m=Math.round((Date.now()-t)/60000),th=D.dataset.lang==='th';
  if(m<1)return th?'เมื่อสักครู่':'just now';if(m<60)return th?m+' นาทีที่แล้ว':m+' min ago';
  var h=Math.round(m/60);if(h<48)return th?h+' ชั่วโมงที่แล้ว':h+' h ago';var dd=Math.round(h/24);return th?dd+' วันที่แล้ว':dd+' days ago'}
-function ages(){var win=+S('window','15');
+function dur(iso){var t=Date.parse(iso);if(isNaN(t))return '';var s=Math.max(0,Math.floor((Date.now()-t)/1000)),th=D.dataset.lang==='th';
+ if(s<60)return s+(th?' วินาที':' s');if(s<3600)return Math.floor(s/60)+(th?' นาที':' min');return Math.floor(s/3600)+(th?' ชั่วโมง':' h')}
+// a session quiet for 30 minutes counts as closed, as in the session count
+function tick1(){document.querySelectorAll('.since').forEach(e=>e.textContent=dur(e.dataset.since));
+ document.querySelectorAll('.livecard').forEach(c=>{var n=0;c.querySelectorAll('.lc-line').forEach(l=>{
+  var old=!(Date.now()-Date.parse(l.dataset.time)<=1800000);l.classList.toggle('stale',old);if(!old)n++});c.classList.toggle('has-lines',n>0)})}
+setInterval(tick1,1000);
+function ages(){tick1();var win=+S('window','15');
  document.querySelectorAll('.ago').forEach(e=>e.textContent=ago(e.dataset.time));
  document.querySelectorAll('.livecard').forEach(c=>{var t=Date.parse(c.dataset.last),s=c.dataset.sessions,
   recent=!isNaN(t)&&(Date.now()-t)<win*60000,open=s!=='?'&&+s>0;

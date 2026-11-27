@@ -2,6 +2,15 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.20 — 2026-11-27
+- **The team activity card shows what each session is doing now, with the task id.** v0.5.19 showed the last tool, at most once a minute. The card now has one line per open session, for example `T38 · Uno: running Bash · 12 s`, with the states running a tool, working (between tools), waiting for you, turn finished and stopped by an error; the duration counts up in the browser.
+  - `trace_heartbeat.py` now runs on UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, Notification, Stop, StopFailure and SessionEnd, and writes on every state change (no throttle). It prints nothing and exits 0, so it never decides a permission or blocks a tool.
+  - The task id comes from the branch name (same rule as the plan guard, e.g. `fix/T38-x`); the hook runs `git rev-parse --abbrev-ref HEAD` on UserPromptSubmit and PreToolUse. Only the id is stored — never the branch name, commands, paths, prompts or messages.
+  - SessionEnd removes the session's heartbeat file. Counts, the feed and the 30-minute open-session rule are unchanged.
+- **Limits:** Claude Code documents no event for a user interrupt, and a blocked or denied tool may send no closing event, so a line can keep its last state until the next event (it is hidden after 30 minutes). PermissionRequest may fire without a dialog, briefly showing "waiting for you". Parallel tools and subagents in one session share one line (the last event wins). A branch with no task id shows none; a finished task's branch keeps showing its id. Each tool call now starts the hook twice.
+- **Checked in Cowork** with a temporary probe: UserPromptSubmit, PreToolUse, PostToolUse, PostToolUseFailure, PermissionRequest, Notification (permission_prompt) and Stop arrived. Not verified there: user interrupt, Notification idle_prompt, StopFailure, SessionEnd.
+- **After updating:** in Claude Code `/plugin marketplace update uno`, update `core@uno`, and restart open Claude Code sessions; then stop `uno-report --serve`, `cargo install --path ~/UNO/uno/tools/uno-report --force --locked`, and start it again.
+
 ## v0.5.19 — 2026-11-27
 - **The team activity card now follows the work.** It took its time and Working state from the newest `audit.log` line of any kind but its text from the newest listed event, so a short session that only opened and closed showed "Working", "12 min ago" and an hour-old agent task. Reading, running commands and editing `.uno/` files (plans, specs, tasks) logged nothing, so a busy session also looked closed after 30 minutes.
   - Card text, time and Working state now come from the same activity; session start and end are not activity, and a project with no open session never shows Working.

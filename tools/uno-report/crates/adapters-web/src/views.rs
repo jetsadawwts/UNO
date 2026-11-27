@@ -1,7 +1,7 @@
 //! Dashboard sections and the whole page.
 use std::collections::BTreeMap;
 
-use domain::{is_open, Event, EventKind, Project, Task, DONE, DROPPED};
+use domain::{is_open, Event, EventKind, Live, Project, Task, DONE, DROPPED};
 
 use crate::*;
 
@@ -69,14 +69,29 @@ pub(crate) fn tiles_for(projects: &[&Project], show_count: bool) -> String {
     out + "</section>"
 }
 
+/// One line per session: `T38 · Uno: running Bash · 20 s`. The page hides lines that went quiet.
+fn live_line(l: &Live) -> String {
+    let (en, th) = match l.state.as_str() {
+        "running" => (format!("running {}", l.tool), format!("กำลังรัน {}", l.tool)),
+        "between" => ("working".into(), "กำลังทำงาน".into()),
+        "waiting" => ("waiting for you".into(), "รอคุณตอบ".into()),
+        "done" => ("turn finished".into(), "ตอบรอบนั้นเสร็จ".into()),
+        "error" => ("stopped by an error".into(), "หยุดเพราะ error".into()),
+        other => (other.to_string(), other.to_string()),
+    };
+    let prefix = if l.task.is_empty() { l.who.clone() } else { format!("{} · {}", l.task, l.who) };
+    format!("<div class=\"lc-line\" data-time=\"{}\">{} · <span class=\"since\" data-since=\"{}\"></span></div>",
+            esc(&l.time), t(&format!("{prefix}: {en}"), &format!("{prefix}: {th}")), esc(&l.since))
+}
+
 /// Live team status. The page decides Working / Idle / Offline from `data-last`, `data-sessions`
 /// and the "active window" setting, so the status ages correctly between regenerations.
 pub(crate) fn activity_panel(projects: &[&Project], sessions_known: bool) -> String {
     let mut out = format!(
         "<h2>{}{} <span class=\"muted hint\">{}</span></h2><div class=\"live\">",
         icon("live"), t("Team activity", "สถานะการทำงานของทีม"),
-        t("From open Claude Code sessions and the latest audit.log events",
-          "จาก session ของ Claude Code ที่เปิดอยู่ และเหตุการณ์ล่าสุดใน audit.log"));
+        t("From UNO's hooks: what each Claude session reported last, and audit.log events",
+          "จาก hook ของ UNO: สถานะล่าสุดที่แต่ละ session ส่งมา และเหตุการณ์ใน audit.log"));
     for p in projects {
         let last = p.activity();
         let at = last.map(|e| e.time.as_str()).unwrap_or("");
@@ -84,9 +99,10 @@ pub(crate) fn activity_panel(projects: &[&Project], sessions_known: bool) -> Str
         out += &format!(
             "<div class=\"livecard\" data-last=\"{}\" data-sessions=\"{sess}\"><div class=\"lc-top\"><span class=\"dot\"></span><b>{}</b>\
              <span class=\"st st-working\">{}</span><span class=\"st st-open\">{}</span><span class=\"st st-idle\">{}</span></div>\
-             <div class=\"lc-last\">{}</div><div class=\"lc-meta\"><span class=\"ago\" data-time=\"{}\"></span> · {}</div></div>",
+             {}<div class=\"lc-last\">{}</div><div class=\"lc-meta\"><span class=\"ago\" data-time=\"{}\"></span> · {}</div></div>",
             esc(at), esc(&p.name),
             t("Working", "กำลังทำงาน"), t("Session open, idle", "เปิด session อยู่ ยังไม่มีกิจกรรม"), t("Not running", "ไม่ได้ทำงาน"),
+            p.live.iter().map(live_line).collect::<String>(),
             last.map(ev_t).unwrap_or_else(|| t("No activity yet", "ยังไม่มีกิจกรรม")),
             esc(at),
             t(&format!("{sess} open session(s)"), &format!("เปิดอยู่ {sess} session")));

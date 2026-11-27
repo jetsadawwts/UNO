@@ -14,7 +14,8 @@ For IT / security review, and for anti-malware alerts. Applies from UNO v0.5.17.
 
 ## Processes it starts
 - `date` (local time for the page header) and, only with `--open`, `open <file or http://localhost:PORT/>`.
-- Since v0.5.17 it no longer runs `lsof` or `ps`; open Claude Code sessions are counted from UNO's hook events in `audit.log` and, since v0.5.19, `heartbeat/*.json` (time, session id, tool name, agent id only).
+- Since v0.5.17 it no longer runs `lsof` or `ps`; open Claude Code sessions are counted from UNO's hook events in `audit.log` and, since v0.5.19, `heartbeat/*.json` (time, session id, tool name, agent id and, since v0.5.20, state, since when and task id only).
+- Separate from `uno-report`: since v0.5.20 the plugin's `trace_heartbeat.py` hook runs `git rev-parse --abbrev-ref HEAD` in the project to read the task id from the branch name; only the id is stored.
 
 ## Network
 - `--serve` listens on `127.0.0.1:<port>` (default 8765) only. Every request must carry `Host: localhost:<port>` or `127.0.0.1:<port>`; `/ws` also refuses a foreign `Origin`; GET only; at most 8 WebSocket connections.
