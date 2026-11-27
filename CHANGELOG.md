@@ -2,6 +2,10 @@
 
 Newest first. Each entry: what changed, why, and what to do after updating.
 
+## v0.5.16 — 2026-11-27
+- **`uno-report` needs Rust 1.91 or newer, and installs with `--locked`.** Since v0.5.13–0.5.15 its dependencies need a newer Rust than some machines have (`clap` 4.6 uses edition 2024, `notify-types` 2.3 needs 1.91); on Rust 1.84 `cargo install` stopped with ``feature `edition2024` is required``. `tools/uno-report` now declares `rust-version = "1.91"` (on Rust 1.85–1.90 cargo now says which version is needed), and every install command uses `--locked` so the dependency versions that passed the tests are the ones built.
+- **After updating:** `rustc --version` (must be 1.91+; if not: `rustup update stable`, or `brew upgrade rust` for a Homebrew Rust) → `launchctl unload ~/Library/LaunchAgents/com.uno.report.plist` → `cargo install --path ~/UNO/uno/tools/uno-report --force --locked` → `launchctl load ~/Library/LaunchAgents/com.uno.report.plist`.
+
 ## v0.5.15 — 2026-11-27
 - **Live dashboard updates in under a second, only the part that changed (R2).** `uno-report --serve` now watches `~/UNO/data` (FSEvents) and re-checks open sessions every 5 s; changes go to the page over a WebSocket (`/ws`) as the changed panes only (overview, each project, project picker, manual), swapped in place without losing the selected project or language. If the socket drops the page polls `/version` as before and reconnects by itself; the header shows Live / Polling / Disconnected. Server: tokio + axum, still 127.0.0.1 only, Host checked on every route, foreign `Origin` refused on `/ws`, at most 8 live pages, GET only. File mode (`--open`, `--watch`) is unchanged except that its page no longer carries the polling script. Tests: 86 Rust tests plus `tools/uno-report/tests/e2e_live.py` (7 browser checks).
 - **After updating:** `launchctl unload ~/Library/LaunchAgents/com.uno.report.plist` → `cargo install --path ~/UNO/uno/tools/uno-report --force` → `launchctl load ~/Library/LaunchAgents/com.uno.report.plist`. Same flags, same plist.

@@ -2,6 +2,7 @@
 name = "domain"
 version = "0.1.0"
 edition.workspace = true
+rust-version.workspace = true
 publish = false
 description = "uno-report core: projects, tasks, audit events and the rules that count them. std only."
 

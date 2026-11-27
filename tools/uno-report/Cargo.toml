@@ -4,11 +4,14 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
+# notify-types 2.3 needs 1.91; clap 4.6 needs edition 2024 (1.85)
+rust-version = "1.91"
 
 [package]
 name = "uno-report"
 version = "0.1.0"
 edition.workspace = true
+rust-version.workspace = true
 description = "UNO dashboard + manual in one local HTML file, built from ~/UNO/data"
 publish = false
 

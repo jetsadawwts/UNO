@@ -51,6 +51,9 @@ browser ◄── /ws: {"sig","panes":{changed only},"meta"} or {"sig","reload":
 2. Test its parsing with plain strings, not the real machine.
 3. Choose it in `src/main.rs`.
 
+## Build
+- Rust 1.91 or newer (`rust-version` in `Cargo.toml`). Install with `cargo install --path tools/uno-report --force --locked` so `Cargo.lock` is used.
+
 ## Tests
 - `cargo test --workspace` — unit tests per crate, `tests/golden.rs` (page and `--help`
   byte-identical to v0.5.12 for the fixtures in `tests/fixtures/data`), `tests/cli.rs`.
