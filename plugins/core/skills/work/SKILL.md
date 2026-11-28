@@ -7,6 +7,8 @@ description: Run one task from an onboarded project's `.uno/tasks.md` under UNO 
 
 UNO decides **what** may be done and **how safe** it must be. The Superpowers skills (if installed) decide **how** the code gets written. This skill joins the two.
 
+**You (Uno) plan and delegate; you never write code.** Mu (`developer`) writes every code change, one plan step at a time; Delta reviews each step and Lambda the whole branch; you commit each step, verify and open the PR. In an onboarded project `guard_zones` blocks your edits outside `.uno/`, `CLAUDE.md`, `.claude/settings.local.json`, `docs/intent.md`, `docs/spec.md` and `docs/refactor/`. Tests go to Delta, UI to Gamma, infrastructure to Iota, database to Kappa, docs to Theta, ADRs to Lambda.
+
 ## Run the whole flow — stop only at these points
 
 Once started with a task id, carry the task through every step below in one go: branch, plan, implement, verify, review, PR, task row. Do not ask "shall I continue?", do not wait between steps, and do not hand the user commands to type that you can run yourself. The approved plan is the owner's go-ahead for everything in it. After approval, ask nothing about work the plan covers. Stop **only** for a decision the plan did not make:
@@ -46,8 +48,8 @@ When the PR is open, finish with a short report (PR link, review label, what the
 
 | Mode | Use when **all** are true | Steps |
 |---|---|---|
-| **small** | touches ≤ 3 files · no `review` zone · no behaviour change, or behaviour is pinned by existing tests · no new dependency | short plan → **owner approves** → change → verify → PR |
-| **full** | anything else, and every UI task | brainstorm → written plan → **owner approves** → worktree → implement with subagents → two-stage review → verify → PR |
+| **small** | touches ≤ 3 files · no `review` zone · no behaviour change, or behaviour is pinned by existing tests · no new dependency | short plan → **owner approves** → Mu changes → Delta reviews → Lambda reviews → verify → PR |
+| **full** | anything else, and every UI task | brainstorm → written plan → **owner approves** → worktree → Mu implements step by step, Delta reviews each step → Lambda reviews the branch → verify → PR |
 
 Write the chosen mode and the reason into the task row. When unsure, use **full**.
 
@@ -79,17 +81,34 @@ No code edit before the owner approves a plan. The `guard_plan` hook enforces it
 |---|---|
 | clarify the change (full mode only) | `superpowers:brainstorming` — skip when the task row already has clear acceptance criteria |
 | plan | `superpowers:writing-plans` |
-| implement | `superpowers:subagent-driven-development` (or `superpowers:executing-plans` for human checkpoints) |
+| implement | `superpowers:subagent-driven-development` (or `superpowers:executing-plans` for human checkpoints), with the UNO roles below |
 | tests | `superpowers:test-driven-development` |
 | debugging | `superpowers:systematic-debugging` |
 | before saying "done" | `superpowers:verification-before-completion` |
 | finish | `superpowers:finishing-a-development-branch` — but always choose **open a PR**, never merge locally |
 
-**If Superpowers is not installed**, use the built-in loop: Plan → Act → Verify → Reflect.
+**UNO roles inside Superpowers** (these override the skill's `Subagent (general-purpose)` lines; keep its prompts, model choice, ledger and review package):
+
+| Superpowers dispatch | UNO member (`subagent_type`) |
+|---|---|
+| implementer (`implementer-prompt.md`) | Mu (`core:developer`) |
+| task reviewer, spec + quality (`task-reviewer-prompt.md`, `re-review-prompt.md`) | Delta (`core:test-writer`), with `mode: review` |
+| final whole-branch review | Lambda (`core:architect`), with `mode: review` |
+
+The implementer template says to commit; in UNO Mu does not commit: after Mu reports DONE, commit its step yourself, then build the review package from that commit. Never dispatch a `general-purpose` agent for code, review or tests.
+
+**If Superpowers is not installed**, use the built-in loop, one plan step at a time:
+1. **Plan** the step's brief (4-part, `references/subagent-brief.md`); Delta's tests first when the step needs them.
+2. **Act**: Mu (`developer`) changes the code; commit its step.
+3. **Verify**: Delta (`test-writer`, `mode: review`) reviews the step's diff — spec and quality. FAIL → back to Mu with the findings.
+4. **Reflect**: next step, or after the last one Lambda (`architect`, `mode: review`) reviews the whole branch diff. FAIL → Mu fixes, Delta reviews the fix, Lambda again.
+
+Review limit in both flows: 3 failed rounds on the same step or branch → `escalated`, as in section 4.
 
 **Team members inside `/core:work`:**
 - Before writing the plan, ask Beta (`codebase-explorer`) concrete questions instead of reading whole folders yourself; put its file:line evidence in the plan's "Files to change".
-- When a planned step needs tests, call Delta (`test-writer`) with that step and the Stack row of the part it touches (its test runner and style): characterization tests first (commit them separately), then failing tests for the new behaviour; you change the code.
+- When a planned step needs tests, call Delta (`test-writer`) with that step and the Stack row of the part it touches (its test runner and style): characterization tests first (commit them separately), then failing tests for the new behaviour; Mu (`developer`) changes the code.
+- Code: Mu (`developer`) for every code step, with a 4-part brief, the step and Delta's tests; Delta (`mode: review`) reviews each step, Lambda (`mode: review`) the whole branch before Epsilon.
 - UI: Gamma (`ui-designer`) `design` mode for the plan, `build` mode after approval. Security: Epsilon (`security-reviewer`) before every PR.
 - Infrastructure and delivery (Dockerfile, compose, Kubernetes, Helm, Terraform, CI/CD): Iota (`devops-engineer`) writes and validates it locally; anything for shared systems goes into the PR as commands for the owner.
 - Database schema, migrations, SQL, ORM models, backfills: Kappa (`data-engineer`), tested up/down/up on the local or test database; the PR is `review: careful`.

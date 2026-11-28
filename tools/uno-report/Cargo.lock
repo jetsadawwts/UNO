@@ -4,11 +4,11 @@ version = 4
 
 [[package]]
 name = "adapters-file"
-version = "0.5.21"
+version = "0.5.22"
 
 [[package]]
 name = "adapters-fs"
-version = "0.5.21"
+version = "0.5.22"
 dependencies = [
  "app",
  "domain",
@@ -18,14 +18,14 @@ dependencies = [
 
 [[package]]
 name = "adapters-os"
-version = "0.5.21"
+version = "0.5.22"
 dependencies = [
  "app",
 ]
 
 [[package]]
 name = "adapters-web"
-version = "0.5.21"
+version = "0.5.22"
 dependencies = [
  "app",
  "axum",
@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "app"
-version = "0.5.21"
+version = "0.5.22"
 dependencies = [
  "domain",
 ]
@@ -265,7 +265,7 @@ dependencies = [
 
 [[package]]
 name = "domain"
-version = "0.5.21"
+version = "0.5.22"
 
 [[package]]
 name = "futures-core"
@@ -883,7 +883,7 @@ checksum = "a2c754d6c33795a1c324727428e5a7dedb5b06195f9890bdbcba760d3e246563"
 
 [[package]]
 name = "uno-report"
-version = "0.5.21"
+version = "0.5.22"
 dependencies = [
  "adapters-file",
  "adapters-fs",

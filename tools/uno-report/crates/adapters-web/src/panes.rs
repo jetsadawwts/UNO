@@ -14,7 +14,7 @@ pub struct Panes {
     pub meta: String,
 }
 
-/// Pane ids: `psel` (picker options), `all`, `p0`…, `manual` — the same HTML `render_page` emits.
+/// Pane ids: `psel` (picker options), `all`, `p0`…, `ofc-data` (Office data), `manual` — the same HTML `render_page` emits.
 pub fn render_panes(d: &app::Dashboard, m: &ManualText, data_label: &str) -> Panes {
     let mut panes = BTreeMap::new();
     panes.insert("psel".to_string(), psel_options(&d.projects));
@@ -22,6 +22,7 @@ pub fn render_panes(d: &app::Dashboard, m: &ManualText, data_label: &str) -> Pan
     for (i, p) in d.projects.iter().enumerate() {
         panes.insert(format!("p{i}"), project_view(p, d.sessions_known));
     }
+    panes.insert("ofc-data".to_string(), crate::office(&d.projects.iter().collect::<Vec<_>>()));
     panes.insert("manual".to_string(), manual_html(m));
     Panes { panes, meta: meta_html(d, data_label, None) }
 }
@@ -66,7 +67,7 @@ mod tests {
     fn pane_ids_are_psel_all_projects_manual() {
         let p = render_panes(&dash(2, "2026-01-01T00:00"), &man(), "/d");
         let ids: Vec<_> = p.panes.keys().map(String::as_str).collect();
-        assert_eq!(ids, ["all", "manual", "p0", "p1", "psel"]);
+        assert_eq!(ids, ["all", "manual", "ofc-data", "p0", "p1", "psel"]);
     }
 
     #[test]
@@ -87,7 +88,7 @@ mod tests {
         let p = render_panes(&dash(1, "2026-01-01T00:00"), &man(), "/d");
         let v = json(&diff_message("abc", None, &p));
         assert_eq!(v["sig"], "abc");
-        assert_eq!(v["panes"].as_object().unwrap().len(), 4);
+        assert_eq!(v["panes"].as_object().unwrap().len(), 5);
         assert!(v["meta"].is_string());
         assert!(v.get("reload").is_none());
     }

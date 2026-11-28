@@ -7,7 +7,7 @@
     {
       "name": "core",
       "source": "./plugins/core",
-      "description": "UNO core: an AI engineering team for your projects — plan gate with owner approval, risk-based review, git/zone/plan guards, and a 12-member team (Uno, Alpha to Lambda) covering intake, work, release and incident."
+      "description": "UNO core: an AI engineering team for your projects — plan gate with owner approval, risk-based review, git/zone/plan guards, and a 13-member team (Uno, Alpha to Mu; Uno plans and delegates, Mu writes the code) covering intake, work, release and incident."
     }
   ]
 }

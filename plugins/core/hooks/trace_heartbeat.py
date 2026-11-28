@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 """Hook for the dashboard's live team activity: what is each session doing right now?
 
-On every state change it overwrites .uno/heartbeat/<session>.json with the time, session id,
-state, since when, tool name, agent id, the task id from the branch name and the plugin version. It never stores
+On every state change it overwrites .uno/heartbeat/<session>.json (the main thread, Uno) or, for
+work inside a subagent, .uno/heartbeat/<session>.<agent_id>.json, with the time, session id, state,
+since when, tool name, agent type, the task id from the branch name and the plugin version, so the
+dashboard sees each team member at once. SubagentStart creates a member's file, SubagentStop (or,
+for a subagent the main thread waited for, the Agent tool's PostToolUse) removes it, SessionEnd
+removes every file of the session. Subagent start, each tool, stop, and the main thread getting an
+Agent answer are also appended to .uno/office.log (time, session, agent id, agent type, step, tool
+name) for the dashboard's hand-off timeline; past 1 MB only the newest 1,000 lines are kept. It never stores
 commands, paths, prompts, messages, branch names or content. Kept out of audit.log so that log
 does not grow. Only active in onboarded projects (`.uno/` exists).
 
@@ -63,6 +69,44 @@ def prune(folder, now):
             os.remove(entry.path)
 
 
+def remove(path):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+LOG_MAX_BYTES = 1024 * 1024
+LOG_KEEP_LINES = 1000
+
+
+def trail(uno, session, step, agent="", kind="", tool=""):
+    """Append one step to .uno/office.log (names only)."""
+    path = os.path.join(uno, "office.log")
+    line = json.dumps({"time": datetime.now(timezone.utc).isoformat(timespec="seconds"), "action": "office",
+                       "event": step, "session": session, "agent": agent, "name": str(kind or "")[:80],
+                       "tool": str(tool or "")[:80]})
+    with open(path, "a", encoding="utf-8") as fh:
+        fh.write(line + "\n")
+    if os.path.getsize(path) > LOG_MAX_BYTES:
+        with open(path, encoding="utf-8") as fh:
+            keep = fh.readlines()[-LOG_KEEP_LINES:]
+        tmp = f"{path}.{os.getpid()}.tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            fh.writelines(keep)
+        os.replace(tmp, path)
+
+
+def agent_files(folder, session):
+    """The session's subagent files: (path, stored entry)."""
+    out = []
+    if os.path.isdir(folder):
+        for entry in os.scandir(folder):
+            if entry.name.startswith(session + ".") and entry.name.endswith(".json") and entry.name != session + ".json":
+                out.append((entry.path, previous(entry.path)))
+    return out
+
+
 def record(event):
     session = event.get("session_id")
     if not isinstance(session, str) or not SAFE_ID.fullmatch(session):
@@ -72,28 +116,54 @@ def record(event):
     if not os.path.isdir(uno):
         return
     folder = os.path.join(uno, "heartbeat")
-    path = os.path.join(folder, session + ".json")
+    main_path = os.path.join(folder, session + ".json")
     name = event.get("hook_event_name")
+    agent_id = event.get("agent_id")
+    sub = isinstance(agent_id, str) and bool(SAFE_ID.fullmatch(agent_id))
+    path = os.path.join(folder, f"{session}.{agent_id}.json") if sub else main_path
     if name == "SessionEnd":
-        if os.path.exists(path):
-            os.remove(path)
+        remove(main_path)
+        for p, _ in agent_files(folder, session):
+            remove(p)
+        return
+    if name == "SubagentStop":
+        if sub:
+            remove(path)
+            trail(uno, session, "stop", agent_id, event.get("agent_type"))
         return
     tool = str(event.get("tool_name") or "")[:80]
-    state = state_of(name, tool)
+    if not sub and name == "PostToolUse" and tool in ("Agent", "Task"):
+        # The main thread got the subagent's answer: that member is done, unless it was only launched.
+        response = event.get("tool_response")
+        launched = isinstance(response, dict) and response.get("status") == "async_launched"
+        kind = (event.get("tool_input") or {}).get("subagent_type")
+        if not launched and kind:
+            trail(uno, session, "return", "", kind)
+            for p, data in agent_files(folder, session):
+                if data.get("name") == str(kind)[:80]:
+                    remove(p)
+    if sub and name == "SubagentStart":
+        trail(uno, session, "start", agent_id, event.get("agent_type"))
+    elif sub and name == "PreToolUse":
+        trail(uno, session, "tool", agent_id, event.get("agent_type"), tool)
+    state = "between" if name == "SubagentStart" and sub else state_of(name, tool)
     if state is None:
         return
     old = previous(path)
     if not tool and state in ("between", "waiting"):
         tool = old.get("tool", "")
-    if state in ("done", "error"):
+    if sub:
+        agent = event.get("agent_type") or old.get("name")
+    elif state in ("done", "error"):
         tool, agent = "", ""
-    elif tool in ("Agent", "Task"):
-        agent = (event.get("tool_input") or {}).get("subagent_type")
     elif name == "Notification":
         agent = old.get("name")
     else:
+        # Main thread is Uno. Only an old Claude Code without agent_id marks subagent work here.
         agent = event.get("agent_type")
-    task = branch_task(root) if name in READ_TASK_ON else old.get("task", "")
+    if state in ("done", "error"):
+        tool = ""
+    task = branch_task(root) if name in READ_TASK_ON else (old.get("task") or previous(main_path).get("task", ""))
     now = datetime.now(timezone.utc)
     stamp = now.isoformat(timespec="seconds")
     same = (old.get("state"), old.get("tool")) == (state, tool)

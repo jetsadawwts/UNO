@@ -10,12 +10,14 @@ pub(crate) fn event_text(k: &EventKind) -> (String, String) {
     match k {
         EventKind::PlanApproved { task } => (format!("Plan {task} approved"), format!("อนุมัติแผน {task}")),
         EventKind::Smoke => ("Smoke test".into(), "ทดสอบระบบ (smoke test)".into()),
-        EventKind::Blocked { rule } => {
+        EventKind::Blocked { who, rule } => {
             let (en, th) = rule_names(rule);
-            (format!("Blocked: {en}"), format!("ระงับ: {th}"))
+            if who.is_empty() { (format!("Blocked: {en}"), format!("ระงับ: {th}")) }
+            else { (format!("{who}: blocked: {en}"), format!("{who}: ระงับ: {th}")) }
         }
         EventKind::AskedOwner { command } => (format!("Asked the owner: {command}"), format!("ขอการยืนยัน: {command}")),
-        EventKind::Edited { file } => (format!("Edited {file}"), format!("แก้ไขไฟล์ {file}")),
+        EventKind::Edited { who, file } if who.is_empty() => (format!("Edited {file}"), format!("แก้ไขไฟล์ {file}")),
+        EventKind::Edited { who, file } => (format!("{who}: edited {file}"), format!("{who}: แก้ไขไฟล์ {file}")),
         EventKind::Agent { who, description } => (format!("{who}: {description}"), format!("{who}: {description}")),
         EventKind::Skill { name } => (format!("Skill {name}"), format!("เรียกใช้ skill {name}")),
         EventKind::Tool { who, tool } => (format!("{who}: used {tool}"), format!("{who}: ใช้ {tool}")),
@@ -71,14 +73,7 @@ pub(crate) fn tiles_for(projects: &[&Project], show_count: bool) -> String {
 
 /// One line per session: `T38 · Uno: running Bash · 20 s`. The page hides lines that went quiet.
 fn live_line(l: &Live) -> String {
-    let (en, th) = match l.state.as_str() {
-        "running" => (format!("running {}", l.tool), format!("กำลังรัน {}", l.tool)),
-        "between" => ("working".into(), "กำลังทำงาน".into()),
-        "waiting" => ("waiting for you".into(), "รอคุณตอบ".into()),
-        "done" => ("turn finished".into(), "ตอบรอบนั้นเสร็จ".into()),
-        "error" => ("stopped by an error".into(), "หยุดเพราะ error".into()),
-        other => (other.to_string(), other.to_string()),
-    };
+    let (en, th) = state_text(l);
     let prefix = if l.task.is_empty() { l.who.clone() } else { format!("{} · {}", l.task, l.who) };
     format!("<div class=\"lc-line\" data-time=\"{}\">{} · <span class=\"since\" data-since=\"{}\"></span>{}</div>",
             esc(&l.time), t(&format!("{prefix}: {en}"), &format!("{prefix}: {th}")), esc(&l.since), hook_version(&l.version))
@@ -295,17 +290,17 @@ pub enum PageMode {
     Live,
 }
 
-/// The whole page: header, dashboard, manual and settings. Byte-identical to v0.5.12.
+/// The whole page: header, dashboard, office, manual and settings.
 pub fn render_page(d: &app::Dashboard, m: &app::ports::ManualText, data_label: &str, mode: &PageMode) -> String {
     let watch = match mode { PageMode::File { watch } => *watch, PageMode::Live => None };
     let header = format!(
-        "<header><h1>{}UNO <span class=\"ver\">dashboard v{VERSION}</span></h1><nav><button class=\"on\" data-v=\"dash\">{}{}</button><button data-v=\"manual\">{}{}</button></nav>\
+        "<header><h1>{}UNO <span class=\"ver\">dashboard v{VERSION}</span></h1><nav><button class=\"on\" data-v=\"dash\">{}{}</button><button data-v=\"office\">{}{}</button><button data-v=\"manual\">{}{}</button></nav>\
          <div class=\"hright\"><span id=\"liveflag\" class=\"pill-btn\" hidden title=\"uno-report --serve\"><i class=\"ld\"></i><span class=\"l-on\">{}</span><span class=\"l-off\">{}</span></span><span id=\"reloadflag\" class=\"pill-btn\" hidden>{}{}</span>\
          <div id=\"lang\" role=\"group\" aria-label=\"Language\"><button data-l=\"en\">EN</button><button data-l=\"th\">TH</button></div>\
          <button id=\"theme\" title=\"Theme\"><span class=\"m-auto\">{}{}</span><span class=\"m-light\">{}{}</span><span class=\"m-dark\">{}{}</span></button>\
          <button id=\"gear\" class=\"pill-btn\">{}{}</button></div>\
          <div class=\"meta\" style=\"flex-basis:100%\">{}</div></header>",
-        logo(26), icon("grid"), t("Dashboard", "แดชบอร์ด"), icon("book"), t("Manual", "คู่มือการใช้งาน"),
+        logo(26), icon("grid"), t("Dashboard", "แดชบอร์ด"), icon("office"), t("Office", "ออฟฟิศ"), icon("book"), t("Manual", "คู่มือการใช้งาน"),
         t("Live", "สด"), t("Disconnected", "ขาดการเชื่อมต่อ"),
         icon("refresh"), "<span class=\"l-en\">Reload every <b class=\"n\"></b> min</span><span class=\"l-th\">โหลดใหม่ทุก <b class=\"n\"></b> นาที</span>",
         icon("auto"), t("Auto (by time)", "อัตโนมัติ (ตามเวลา)"), icon("sun"), t("Light", "โหมดสว่าง"), icon("moon"), t("Dark", "โหมดมืด"),
@@ -313,10 +308,11 @@ pub fn render_page(d: &app::Dashboard, m: &app::ports::ManualText, data_label: &
         meta_html(d, data_label, watch));
     let page = format!(
         "<!DOCTYPE html><html lang=\"en\" data-lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\
-         <title>UNO — Dashboard and Manual</title><script>{}{HEAD_JS}</script><style>{CSS}</style></head><body>{header}\
-         <main><div id=\"dash\" class=\"view on\">{}</div><div id=\"manual\" class=\"view\">{}</div></main>{}<script>{JS}</script>{}</body></html>",
+         <title>UNO — Dashboard and Manual</title><script>{}{HEAD_JS}</script><style>{CSS}</style>{}</head><body>{header}\
+         <main><div id=\"dash\" class=\"view on\">{}</div><div id=\"office\" class=\"view\">{}</div><div id=\"manual\" class=\"view\">{}</div></main>{}<script>{JS}</script>{}</body></html>",
         if matches!(mode, PageMode::Live) { "window.UNO_LIVE=true;" } else { "" },
-        dashboard(&d.projects, d.sessions_known), manual_html(m), settings_dialog(watch),
+        office_style(),
+        dashboard(&d.projects, d.sessions_known), office_page(&d.projects.iter().collect::<Vec<_>>()), manual_html(m), settings_dialog(watch),
         if matches!(mode, PageMode::Live) { format!("<script>{LIVE_JS}</script>") } else { String::new() });
     page
 }

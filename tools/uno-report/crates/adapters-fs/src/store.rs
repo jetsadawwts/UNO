@@ -37,6 +37,8 @@ impl ProjectStore for FsStore {
             for beat in beat_files(&dir) {
                 records.extend(parse_audit(&read(&beat)).into_iter().filter(|r| r.action == "heartbeat"));
             }
+            // Work trail of subagents from trace_heartbeat.py, for the Office tab.
+            records.extend(parse_audit(&read(&dir.join("office.log"))).into_iter().filter(|r| r.action == "office"));
             out.push(ProjectFiles { name, audit: records, tasks: parse_tasks(&read(&tasks)) });
         }
         Ok(out)
@@ -47,6 +49,7 @@ impl ProjectStore for FsStore {
         for d in self.dirs().unwrap_or_default() {
             sig += &file_stamp(&d.join("audit.log"));
             sig += &file_stamp(&d.join("tasks.md"));
+            sig += &file_stamp(&d.join("office.log"));
             for beat in beat_files(&d) {
                 sig += &file_stamp(&beat);
             }

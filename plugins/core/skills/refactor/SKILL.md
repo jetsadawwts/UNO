@@ -28,7 +28,7 @@ Treat it as a refactor of the whole part: behaviour stays, the language changes.
 
 ## Step 2 — Safety net (gate: QA lens)
 
-Before touching production code:
+Before touching production code (Delta, `test-writer`, writes these tests; Uno never writes code):
 1. Write characterization tests that pin the current behaviour of the target, including odd behaviour. Name them `*characterization*` so they are easy to find.
 2. Cover: public interfaces of the module, main paths from the critical flows in the profile, error paths, and any data written.
 3. Run them on the current code: all must pass. Record the count and run time in the plan.
@@ -47,7 +47,7 @@ Large changes use strangler steps: build the new path beside the old, route a sm
 
 ## Step 4 — Execute, one step at a time
 
-For each step run the UNO inner loop (act → verify → reflect, max 3 tries, then escalate). Per PR:
+For each step run the UNO inner loop (act → verify → reflect, max 3 tries, then escalate) as in `/core:work` section 3: Mu (`developer`) makes the change, Delta (`test-writer`, `mode: review`) reviews it, Lambda (`architect`, `mode: review`) reviews the branch before the PR. Uno commits and opens the PR. Per PR:
 - title prefix `refactor:`; description links the ADR and plan step
 - no feature changes, no bug fixes, no formatting sweeps mixed in — log anything found in the plan's "Found along the way" list
 - tests: characterization + existing suite pass; changed lines covered

@@ -14,6 +14,8 @@ pub fn agent_name(raw: &str) -> String {
         "devops-engineer" => "Iota",
         "data-engineer" => "Kappa",
         "architect" => "Lambda",
+        "developer" => "Mu",
+        "uno" => "Uno",
         _ => return id.to_string(),
     };
     greek.to_string()

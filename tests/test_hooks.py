@@ -235,6 +235,35 @@ def main():
     check("plan: edit on branch without task id", hook("guard_plan.py", edit("src/a.ts"), repo)[0], 2)
     check("install on branch without task id", hook("guard_plan.py", bash("npm install xlsx"), repo)[0], 2)
 
+    # --- guard_zones: Uno (main thread) delegates; members are named in the log ---
+    zlog = os.path.join(data, "audit.log")
+    def last_zone():
+        with open(zlog, encoding="utf-8") as fh:
+            return json.loads(fh.read().splitlines()[-1])
+    member = {"agent_id": "a9", "agent_type": "core:developer", "session_id": "z-1"}
+    check("lead: Uno editing code blocked", hook("guard_zones.py", edit("src/a.ts"), repo)[0], 2)
+    e = last_zone()
+    check("lead: block logged as uno", (e.get("action"), e.get("rule"), e.get("name")), ("blocked", "lead-delegates", "uno"))
+    for f in ("CLAUDE.md", ".claude/settings.local.json", "docs/spec.md", "docs/refactor/x-plan.md"):
+        check(f"lead: Uno may edit {f}", hook("guard_zones.py", edit(f), repo)[0], 0)
+    check("lead: Uno may edit .uno (symlink)", hook("guard_zones.py", edit(".uno/plans/T7.md"), repo)[0], 0)
+    check("lead: docs/guide.md is Theta's", hook("guard_zones.py", edit("docs/guide.md"), repo)[0], 2)
+    check("lead: member may edit code", hook("guard_zones.py", {**edit("src/a.ts"), **member}, repo)[0], 0)
+    e = last_zone()
+    check("lead: member edit logged with its name only", (e.get("action"), e.get("name"), e.get("file")), ("allowed", "core:developer", "src/a.ts"))
+    check("lead: switch off with UNO_LEAD_EDITS=allow",
+          hook("guard_zones.py", edit("src/a.ts"), repo, {"UNO_LEAD_EDITS": "allow"})[0], 0)
+    check("lead: agent_type without agent_id is Uno", hook("guard_zones.py", {**edit("src/a.ts"), "agent_type": "core:developer"}, repo)[0], 2)
+    open(os.path.join(data, "zones"), "w").write("[forbidden]\nsecret/**\n[review]\n")
+    check("lead: forbidden still blocks members", hook("guard_zones.py", {**edit("secret/k"), **member}, repo)[0], 2)
+    check("lead: forbidden block names the member", last_zone().get("name"), "core:developer")
+    open(os.path.join(data, "zones"), "w").write("[forbidden]\n[review]\n")
+    sh("git", "switch", "-q", "master", cwd=repo)
+    hook("guard_git.py", {**bash("git commit -m x"), **member}, repo)
+    check("git: block names the member", last_zone().get("name"), "core:developer")
+    hook("guard_git.py", bash("git commit -m x"), repo)
+    check("git: Uno's block is named uno", last_zone().get("name"), "uno")
+
     # --- approve_plan.py requires sections ---
     sh("git", "switch", "-q", "fix/T7-x", cwd=repo)
     r = subprocess.run([sys.executable, APPROVE, "T8"], cwd=repo, capture_output=True, text=True,
@@ -317,11 +346,50 @@ def main():
     beat("h-1", "SessionEnd")
     check("state: session end removes the file", os.path.exists(os.path.join(beats, "h-1.json")), False)
     beat("h-2", "PreToolUse", tool_name="Agent", tool_input={"subagent_type": "core:ui-designer"})
-    check("state: Agent call names the agent", seen("h-2", "name"), ("core:ui-designer",))
+    check("state: Agent call is Uno handing off", seen("h-2", "name", "tool"), ("", "Agent"))
     beat("h-3", "PreToolUse", tool_name="Grep", agent_type="core:codebase-explorer")
-    check("state: tool inside a subagent names the agent", seen("h-3", "name"), ("core:codebase-explorer",))
+    check("state: old Claude Code (no agent_id) names the agent on the main file", seen("h-3", "name"), ("core:codebase-explorer",))
     beat("h-3", "Stop")
     check("state: end of turn is the main thread again", seen("h-3", "name"), ("",))
+
+    # one file per subagent: <session>.<agent_id>.json
+    beat("p-1", "UserPromptSubmit")
+    beat("p-1", "SubagentStart", agent_id="a1", agent_type="core:security-reviewer", prompt="SECRET-SUB")
+    check("agent: start creates the member's file", seen("p-1.a1", "state", "name", "session", "task"), ("between", "core:security-reviewer", "p-1", "T7"))
+    beat("p-1", "PreToolUse", tool_name="Grep", agent_id="a1", agent_type="core:security-reviewer", tool_input=secret)
+    beat("p-1", "PreToolUse", tool_name="Bash", agent_id="a2", agent_type="core:test-writer", tool_input=secret)
+    check("agent: two members work at once", (seen("p-1.a1", "state", "tool"), seen("p-1.a2", "state", "tool", "name")),
+          (("running", "Grep"), ("running", "Bash", "core:test-writer")))
+    check("agent: main thread file stays Uno", seen("p-1", "name", "state"), ("", "between"))
+    beat("p-1", "SubagentStop", agent_id="a1", agent_type="core:security-reviewer", last_assistant_message="SECRET-ANSWER")
+    check("agent: stop removes only that member's file", (os.path.exists(os.path.join(beats, "p-1.a1.json")), os.path.exists(os.path.join(beats, "p-1.a2.json"))), (False, True))
+    beat("p-1", "PostToolUse", tool_name="Agent", tool_input={"subagent_type": "core:test-writer"}, tool_response={"status": "async_launched"})
+    check("agent: a background launch keeps the member", os.path.exists(os.path.join(beats, "p-1.a2.json")), True)
+    beat("p-1", "PostToolUse", tool_name="Agent", tool_input={"subagent_type": "core:test-writer"}, tool_response={"status": "completed", "content": "SECRET-OUT"})
+    check("agent: a finished Agent call removes the member (no SubagentStop needed)", os.path.exists(os.path.join(beats, "p-1.a2.json")), False)
+    beat("p-1", "PreToolUse", tool_name="Read", agent_id="a3", agent_type="core:architect")
+    for bad in ("../x", "a/b", ""):
+        beat("p-1", "PreToolUse", tool_name="Read", agent_id=bad, agent_type="core:architect")
+    check("agent: unsafe agent ids never make a file", sorted(f for f in os.listdir(beats) if f.startswith("p-1.")), ["p-1.a3.json", "p-1.json"])
+    check("agent: nothing sensitive stored", "SECRET" in "".join(open(os.path.join(beats, f)).read() for f in os.listdir(beats) if f.startswith("p-1")), False)
+    trail_path = os.path.join(repo, ".uno", "office.log")
+    steps = [json.loads(l) for l in open(trail_path, encoding="utf-8")] if os.path.exists(trail_path) else []
+    check("trail: start, tools, stop and return in office.log",
+          [(x["event"], x["agent"], x["name"], x["tool"]) for x in steps if x["session"] == "p-1"],
+          [("start", "a1", "core:security-reviewer", ""), ("tool", "a1", "core:security-reviewer", "Grep"),
+           ("tool", "a2", "core:test-writer", "Bash"), ("stop", "a1", "core:security-reviewer", ""),
+           ("return", "", "core:test-writer", ""), ("tool", "a3", "core:architect", "Read")])
+    check("trail: fields are names only", sorted(steps[0]) if steps else [], ["action", "agent", "event", "name", "session", "time", "tool"])
+    check("trail: nothing sensitive stored", "SECRET" in open(trail_path, encoding="utf-8").read(), False)
+    check("trail: main-thread tools are not in the trail", any(x["session"] == "h-1" for x in steps), False)
+    check("trail: audit.log untouched", open(log, encoding="utf-8").read(), log_before)
+    with open(trail_path, "a", encoding="utf-8") as fh:
+        fh.write(("x" * 1100 + "\n") * 1000)
+    beat("p-1", "PreToolUse", tool_name="Read", agent_id="a3", agent_type="core:architect")
+    lines = open(trail_path, encoding="utf-8").read().splitlines()
+    check("trail: past 1 MB keeps the newest 1,000 lines", (len(lines), json.loads(lines[-1]).get("tool")), (1000, "Read"))
+    beat("p-1", "SessionEnd")
+    check("agent: session end removes every file of the session", sorted(f for f in os.listdir(beats) if f.startswith("p-1")), [])
     sh("git", "switch", "-qc", "no-task-here", cwd=repo)
     beat("h-2", "PostToolUse", tool_name="Read")
     check("task: other events keep the last value", seen("h-2", "task"), ("T7",))

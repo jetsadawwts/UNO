@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{agent_name, clip, is_open, AuditRecord, Event, EventKind, Live, Task, RECENT_KEEP};
+use crate::{agent_name, clip, is_open, member, AuditRecord, Call, Event, EventKind, Live, Step, Task, RECENT_KEEP};
 
 /// Everything the dashboard shows about one project folder in `~/UNO/data`.
 #[derive(Default)]
@@ -28,6 +28,16 @@ pub struct Project {
     pub ended: BTreeMap<String, String>,
     pub sessions: usize,
     pub tasks: Vec<Task>,
+    /// Agent calls from Uno, oldest first (all of them, not only the recent feed).
+    pub calls: Vec<Call>,
+    /// `office.log` steps (start, tool, stop, return).
+    pub steps: Vec<Step>,
+}
+
+/// Who made a guarded call (`allowed` / `blocked`): the guards write `uno` for the main thread and
+/// the agent type for a member since v0.5.22; older lines have no name, so nobody is named.
+fn doer(raw: &str) -> String {
+    if raw.is_empty() { String::new() } else { agent_name(raw) }
 }
 
 impl Project {
@@ -56,6 +66,14 @@ impl Project {
 
     /// Count one audit record. Call [`Project::finish`] after the last one.
     pub fn apply(&mut self, r: &AuditRecord) {
+        if r.action == "office" {
+            // Work trail for the Office tab only: changes no count.
+            if !r.time.is_empty() && !r.session.is_empty() {
+                self.steps.push(Step { time: r.time.clone(), session: r.session.clone(), agent: clip(&r.agent, 64), who: member(&r.name),
+                                       kind: clip(&r.event, 12), tool: clip(&r.tool, 60) });
+            }
+            return;
+        }
         if r.action == "heartbeat" {
             // Liveness only: not an event, so it changes no count and stays out of the feed.
             if !r.time.is_empty() && self.beat.as_ref().is_none_or(|b| r.time > b.time) {
@@ -99,7 +117,7 @@ impl Project {
             (_, "blocked") => {
                 let rule = [&r.rule, &r.zone, &r.tool].into_iter().find(|x| !x.is_empty()).cloned().unwrap_or_default();
                 *self.blocked.entry(rule.clone()).or_default() += 1;
-                Some(EventKind::Blocked { rule })
+                Some(EventKind::Blocked { who: doer(&r.name), rule })
             }
             (_, "asked-owner") => {
                 self.asked_owner += 1;
@@ -110,11 +128,14 @@ impl Project {
                     "review" => self.edits_review += 1,
                     _ => self.edits_normal += 1,
                 }
-                Some(EventKind::Edited { file: clip(&r.file, 60) })
+                Some(EventKind::Edited { who: doer(&r.name), file: clip(&r.file, 60) })
             }
             (_, "called") if matches!(r.tool.as_str(), "Agent" | "Task") => {
                 let who = agent_name(&r.name);
                 *self.agents.entry(who.clone()).or_default() += 1;
+                if !time.is_empty() {
+                    self.calls.push(Call { time: time.clone(), session: r.session.clone(), who: who.clone(), description: clip(&r.description, 120) });
+                }
                 Some(EventKind::Agent { who, description: clip(&r.description, 60) })
             }
             (_, "called") => Some(EventKind::Skill { name: r.name.clone() }),
@@ -245,7 +266,18 @@ mod tests {
         p.apply(&rec(|r| { r.action = "blocked".into(); r.zone = "forbidden".into(); r.tool = "Edit".into(); r.time = "2026-01-02T10:00".into(); }));
         assert_eq!(p.blocked["forbidden"], 1);
         assert_eq!(p.blocked_total(), 1);
-        assert_eq!(p.recent[0].kind, EventKind::Blocked { rule: "forbidden".into() });
+        assert_eq!(p.recent[0].kind, EventKind::Blocked { who: String::new(), rule: "forbidden".into() });
+    }
+
+    #[test]
+    fn edits_and_blocks_carry_the_member() {
+        let mut p = Project::default();
+        p.apply(&rec(|r| { r.action = "allowed".into(); r.file = "src/a.ts".into(); r.name = "core:developer".into(); r.time = "2026-01-02T10:00".into(); }));
+        p.apply(&rec(|r| { r.action = "blocked".into(); r.rule = "lead-delegates".into(); r.name = "uno".into(); r.time = "2026-01-02T10:01".into(); }));
+        assert_eq!(p.recent[0].kind, EventKind::Edited { who: "Mu".into(), file: "src/a.ts".into() });
+        assert_eq!(p.recent[1].kind, EventKind::Blocked { who: "Uno".into(), rule: "lead-delegates".into() });
+        assert_eq!(p.edits_normal, 1);
+        assert!(p.agents.is_empty(), "an edit is not an agent call");
     }
 
     #[test]
@@ -321,6 +353,7 @@ mod tests {
     #[test]
     fn agent_name_known_and_unknown() {
         assert_eq!(agent_name("core:architect"), "Lambda");
+        assert_eq!(agent_name("core:developer"), "Mu");
         assert_eq!(agent_name("x:foo"), "foo");
         assert_eq!(agent_name("plain"), "plain");
     }

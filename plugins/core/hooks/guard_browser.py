@@ -69,6 +69,14 @@ def check(root, url):
             f"({', '.join(sorted(allowed)) or 'none'}) may be opened; the same login may work on production.")
 
 
+def who(event):
+    """Who made this call, names only: the subagent type (e.g. core:developer), or "uno" for the main thread."""
+    kind = event.get("agent_type")
+    if event.get("agent_id") and isinstance(kind, str) and kind:
+        return {"name": kind[:64]}
+    return {"name": "uno"}
+
+
 def main():
     try:
         event = json.load(sys.stdin)
@@ -89,7 +97,7 @@ def main():
     try:
         with open(os.path.join(root, ".uno", "audit.log"), "a", encoding="utf-8") as fh:
             fh.write(json.dumps({"time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-                                 "session": event.get("session_id"), "tool": tool,
+                                 "session": event.get("session_id"), **who(event), "tool": tool,
                                  "url": str(find_url(event.get("tool_input") or {}))[:200],
                                  "action": "blocked", "rule": "browser-host"}, ensure_ascii=False) + "\n")
     except OSError:

@@ -28,7 +28,7 @@ Write `docs/adr/0001-architecture.md` from `templates/adr.md`. Compare at most 3
 
 ## Step 4 — Scaffold
 
-Only after Steps 1–3 are approved. Create, in this order:
+Only after Steps 1–3 are approved. Uno does not write code here either: Mu (`developer`) writes items 1–2, Iota (`devops-engineer`) item 3, Delta (`test-writer`, `mode: review`) and Lambda (`architect`, `mode: review`) review the scaffold; Uno writes items 4–7. Create, in this order:
 1. Project skeleton for the chosen stack, with a single passing smoke test.
 2. Lint, format and type check configured and passing.
 3. CI that runs lint + tests on every PR and blocks merge on failure.

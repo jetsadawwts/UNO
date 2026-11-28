@@ -4,20 +4,21 @@ AI team members are named in lifecycle order. People hold **roles** (`owner`, `t
 
 | Name | Code | Job | Helps role | Edits | Status |
 |---|---|---|---|---|---|
-| Uno | `uno` | lead: plans, enforces rules, implements, opens PRs | all | code, inside an approved plan | live (`work`, `onboard`, `new-project`, `refactor`, `portfolio-scan`) |
+| Uno | `uno` | lead: plans, delegates, enforces rules, commits each step, opens PRs; never writes code | all | `.uno/`, `CLAUDE.md`, `.claude/settings.local.json`, `docs/intent.md`, `docs/spec.md`, `docs/refactor/` only (`guard_zones` blocks the rest) | live (`work`, `onboard`, `new-project`, `refactor`, `portfolio-scan`) |
 | Alpha | `intake-triager` | request or bug → spec + proposed tasks | owner | `.uno/` only | live (`/core:intake`) |
 | Beta | `codebase-explorer` | read-only search, file:line answers | tech-lead | nothing | live (called by skills) |
 | Gamma | `ui-designer` | UI design (`design` mode, in the plan) and build (`build` mode) | tech-lead | design: nothing · build: UI inside the plan | live |
-| Delta | `test-writer` | characterization tests, failing tests for new behaviour | qa | test files only | live (called by `work`) |
+| Delta | `test-writer` | characterization tests, failing tests for new behaviour; `review` mode: per-task review (spec + quality) of Mu's diff | qa | test files only · review: nothing | live (called by `work`) |
 | Epsilon | `security-reviewer` | personal/sensitive data, secrets, auth, deps review of a diff | security | nothing | live (before every PR) |
 | Zeta | `release-manager` | release notes, deploy steps, rollback plan | ops, tech-lead | `.uno/releases/` only | live (`/core:release`) |
 | Eta | `incident-scribe` | incident record, likely causes, fix + test tasks | ops | `.uno/` only | live (`/core:incident`) |
 | Theta | `doc-writer` | README, user guides, deploy/operations and developer docs, checked against the code | owner, ops | documentation files only | live (called by `work`, suggested by `release`) |
 | Iota | `devops-engineer` | Docker, compose, Kubernetes, Helm, Terraform, CI/CD, local dev environments; validates locally, hands the owner commands for shared systems | ops | infrastructure and pipeline files only; local targets only | live (called by `work`) |
 | Kappa | `data-engineer` | schema design, reversible migrations, queries and indexes, backfills on local/test data | tech-lead, security | schema, migration, SQL and ORM model files only; local/test databases only | live (called by `work`) |
-| Lambda | `architect` | ADRs for changes bigger than one task: options, trade-offs, rollout, task breakdown | tech-lead, owner | ADRs and `.uno/` notes only | live (called by `intake`, `refactor`, `work`) |
+| Lambda | `architect` | ADRs for changes bigger than one task: options, trade-offs, rollout, task breakdown; `review` mode: whole-branch review before the PR | tech-lead, owner | ADRs and `.uno/` notes only · review: nothing | live (called by `intake`, `refactor`, `work`) |
+| Mu | `developer` | application code for one plan step at a time; makes Delta's tests pass; Superpowers' implementer | tech-lead | source code inside the plan; not Delta's tests, not `.uno/` | live (called by `work`, `refactor`, `new-project`) |
 
-Reserved names for new members, in order: Mu, Nu, Xi, Omicron, Rho, Tau, Upsilon, Phi, Chi, Psi (Pi, Sigma, Omega kept for last: they read as symbols).
+Reserved names for new members, in order: Nu, Xi, Omicron, Rho, Tau, Upsilon, Phi, Chi, Psi (Pi, Sigma, Omega kept for last: they read as symbols).
 Subagents cannot start other subagents: a skill (run by Uno) calls Beta first and passes its answer on.
 
 Rules

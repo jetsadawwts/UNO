@@ -53,11 +53,11 @@ portfolio-scan  →  registry (human)  →  onboard, per project, wave by wave
 | `plugins/core/skills/new-project/` | greenfield flow + templates: intent, ADR, CLAUDE.md, settings (internal / sensitive) |
 | `plugins/core/skills/work/` | run one task: mode choice, branch rules, Superpowers mapping, `tasks.md` template, subagent brief |
 | `plugins/core/skills/refactor/` | behaviour-preserving refactor flow + ADR and plan templates |
-| `plugins/core/skills/work/references/team.md` | team roster: Uno + Alpha…Eta, their codes, jobs and status |
+| `plugins/core/skills/work/references/team.md` | team roster: Uno + Alpha…Mu, their codes, jobs and status (Uno plans and delegates; Mu writes the code) |
 | `plugins/core/agents/security-reviewer.md` | **Epsilon** — read-only subagent: patient data, secrets, auth review of a diff |
 | `plugins/core/agents/ui-designer.md` | **Gamma** — UI design for any project: frontend-design for direction, design intent match/refresh/new, accessibility baseline, extra rules for `sensitive` tier |
-| `plugins/core/hooks/guard_zones.py` | blocks agent edits in forbidden zones, logs every edit to `.uno/audit.log` |
-| `plugins/core/hooks/trace_heartbeat.py` | keeps what each session is doing now in `.uno/heartbeat/<session>.json` (time, session id, state, tool and agent names, task id from the branch name, plugin version; no commands, paths or content), for the dashboard's team activity |
+| `plugins/core/hooks/guard_zones.py` | blocks agent edits in forbidden zones and, since v0.5.22, Uno's own edits outside UNO's files (it delegates); logs every edit to `.uno/audit.log` with who made it (`uno` or the member's agent type) |
+| `plugins/core/hooks/trace_heartbeat.py` | keeps what each session and, since v0.5.22, each subagent is doing now in `.uno/heartbeat/<session>.json` and `<session>.<agent_id>.json` (time, session id, state, tool and agent names, task id from the branch name, plugin version; no commands, paths or content), for the dashboard's team activity; since v0.5.22 also appends each subagent's start, tools and stop to `.uno/office.log` (names only) for the Office tab's hand-off timeline |
 | `plugins/core/hooks/trace_agents.py` | records every skill and subagent call (UNO, Superpowers, Gamma, Epsilon) to `.uno/audit.log`, so you can see afterwards which flow a task followed |
 | `plugins/core/hooks/guard_git.py` | blocks commit/merge on the default branch, pushes to it, and plain force push |
 | `registry/projects.example.yaml` | shape of the project registry (tier, wave, owner, autonomy) |

@@ -2,6 +2,8 @@
 """PreToolUse hook: block agent edits in forbidden zones and log edits in review zones.
 
 Reads `.uno/zones` in the project root. No zones file → allow everything (project not onboarded).
+In an onboarded project the main thread (Uno) may edit only LEAD_FILES; members are told apart by
+the `agent_id` Claude Code sends for subagent calls.
 Exit 2 blocks the tool call and shows stderr to Claude; exit 0 allows it.
 """
 import json
@@ -11,6 +13,11 @@ from datetime import datetime, timezone
 from fnmatch import fnmatch
 
 EDIT_TOOLS = {"Edit", "Write", "MultiEdit", "NotebookEdit"}
+
+# Uno (the main thread) plans and delegates: it may edit only UNO's own files. Code, tests, UI,
+# infrastructure and docs go to a team member (Mu for code). UNO_LEAD_EDITS=allow turns this off.
+LEAD_FILES = (".uno/**", "CLAUDE.md", ".claude/settings.local.json",
+              "docs/intent.md", "docs/spec.md", "docs/refactor/**")
 
 
 def load_zones(root):
@@ -48,6 +55,14 @@ def audit(root, entry):
         pass  # logging must never break the session
 
 
+def who(event):
+    """Who made this call, names only: the subagent type (e.g. core:developer), or "uno" for the main thread."""
+    kind = event.get("agent_type")
+    if event.get("agent_id") and isinstance(kind, str) and kind:
+        return {"name": kind[:64]}
+    return {"name": "uno"}
+
+
 def main():
     try:
         event = json.load(sys.stdin)
@@ -73,7 +88,7 @@ def main():
     rel = os.path.relpath(abs_target, abs_root).replace(os.sep, "/")
 
     entry = {"time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-             "session": event.get("session_id"), "tool": tool, "file": rel}
+             "session": event.get("session_id"), **who(event), "tool": tool, "file": rel}
 
     for pattern in zones["forbidden"]:
         if matches(rel, pattern):
@@ -81,6 +96,14 @@ def main():
             print(f"UNO: '{rel}' is in a forbidden zone ({pattern}). Agents may not edit it. "
                   "Describe the change needed and ask a human to make it.", file=sys.stderr)
             return 2
+
+    lead = not event.get("agent_id") and os.environ.get("UNO_LEAD_EDITS", "") != "allow"
+    if lead and not any(fnmatch(rel, p) for p in LEAD_FILES):
+        audit(root, {**entry, "zone": "lead", "action": "blocked", "rule": "lead-delegates"})
+        print(f"UNO: Uno plans and delegates; it does not edit '{rel}'. Send this step to "
+              "Mu (core:developer), or to the member who owns this kind of file: Delta tests, "
+              "Gamma UI, Iota infrastructure, Kappa database, Theta docs, Lambda ADRs.", file=sys.stderr)
+        return 2
 
     zone = "normal"
     for pattern in zones["review"]:

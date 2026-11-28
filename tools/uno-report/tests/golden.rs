@@ -1,4 +1,5 @@
-//! Golden test: the page built from the fake fixture data must stay byte-identical to v0.5.12.
+//! Golden test: the page built from the fake fixture data must stay byte-identical to the saved
+//! copy, except the Office art, which is checked for its type and replaced by `<OFFICE-ART>`.
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
@@ -23,6 +24,7 @@ fn golden_file_output_matches() {
     assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
     let got = std::fs::read_to_string(&out).unwrap().replace(data.to_str().unwrap(), "<DATA>")
         .replace(concat!("dashboard v", env!("CARGO_PKG_VERSION")), "dashboard v<VERSION>");
+    let got = without_picture(&got);
     let _ = std::fs::remove_file(&out);
     assert_eq!(got, include_str!("golden/report.html"));
 }
@@ -38,4 +40,21 @@ fn file_page_has_no_live_script() {
     let page = include_str!("golden/report.html");
     assert!(!page.contains("new WebSocket"));
     assert!(!page.contains("fetch('/version'"), "polling belongs to the live page only");
+}
+
+/// The embedded Office art (25 WebP images, ~500 KB of base64); keep it out of the saved copy.
+fn without_picture(page: &str) -> String {
+    let head = "data:image/webp;base64,";
+    let (mut out, mut rest, mut n) = (String::new(), page, 0);
+    while let Some(i) = rest.find(head) {
+        let start = i + head.len();
+        let end = start + rest[start..].find('"').unwrap();
+        assert!(rest[start..end].starts_with("UklGR"), "office art is WebP");
+        out += &rest[..start];
+        out += "<OFFICE-ART>";
+        rest = &rest[end..];
+        n += 1;
+    }
+    assert_eq!(n, 25, "floor, people, Uno's desk, 11 chairs, 11 desks");
+    out + rest
 }

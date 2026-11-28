@@ -76,6 +76,7 @@ pub(crate) fn icon(name: &str) -> String {
         "list" => "<path d='M9 6h11M9 12h11M9 18h11'/><circle cx='4.5' cy='6' r='1'/><circle cx='4.5' cy='12' r='1'/><circle cx='4.5' cy='18' r='1'/>",
         "table" => "<rect x='3' y='4' width='18' height='16' rx='2'/><path d='M3 10h18M9 10v10'/>",
         "grid" => "<rect x='3' y='3' width='7' height='7' rx='1.5'/><rect x='14' y='3' width='7' height='7' rx='1.5'/><rect x='3' y='14' width='7' height='7' rx='1.5'/><rect x='14' y='14' width='7' height='7' rx='1.5'/>",
+        "office" => "<rect x='4' y='3' width='16' height='18' rx='1'/><path d='M8 7h2M14 7h2M8 11h2M14 11h2M10 21v-4h4v4'/>",
         "book" => "<path d='M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z'/><path d='M4 19V5'/>",
         "back" => "<path d='M19 12H5M11 6l-6 6 6 6'/>",
         "gear" => "<circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z'/>",
@@ -128,6 +129,7 @@ pub(crate) fn rule_names(code: &str) -> (String, String) {
         "infra" => ("Infrastructure (guard_infra)", "ระบบโครงสร้างพื้นฐาน (guard_infra)"),
         "browser" => ("Out-of-scope site (guard_browser)", "เว็บนอกขอบเขต (guard_browser)"),
         "forbidden" => ("Forbidden zone (guard_zones)", "เขตห้ามแก้ไข (guard_zones)"),
+        "lead-delegates" => ("Uno must delegate code (guard_zones)", "Uno ต้องส่งงานโค้ดให้ทีม (guard_zones)"),
         other => (other, other),
     };
     (en.to_string(), th.to_string())

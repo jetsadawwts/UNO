@@ -20,6 +20,8 @@ pub struct AuditRecord {
     pub since: String,
     /// Heartbeat only: version of the plugin whose hook wrote it.
     pub version: String,
+    /// `office.log` only: Claude Code agent id of a subagent.
+    pub agent: String,
 }
 
 /// What one session is doing now, from its heartbeat file.
@@ -40,9 +42,10 @@ pub struct Live {
 pub enum EventKind {
     PlanApproved { task: String },
     Smoke,
-    Blocked { rule: String },
+    /// `who`: the member whose call was stopped (`Uno` for the main thread).
+    Blocked { who: String, rule: String },
     AskedOwner { command: String },
-    Edited { file: String },
+    Edited { who: String, file: String },
     Agent { who: String, description: String },
     Skill { name: String },
     /// Latest tool use, from the heartbeat hook.

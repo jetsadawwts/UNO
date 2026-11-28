@@ -140,7 +140,7 @@ async fn first_message_has_all_panes() {
     let mut s = ws(l.port, None).await.unwrap();
     let v = next_json(&mut s).await;
     let keys: Vec<_> = v["panes"].as_object().unwrap().keys().cloned().collect();
-    assert_eq!(keys, ["all", "manual", "p0", "psel"]);
+    assert_eq!(keys, ["all", "manual", "ofc-data", "p0", "psel"]);
     assert_eq!(v["sig"].as_str().unwrap().len(), 16);
 }
 

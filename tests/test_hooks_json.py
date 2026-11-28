@@ -40,7 +40,7 @@ def main():
         results.append((f"{event}: {cmd}", started and r.returncode == 0, r.returncode, out.strip()[:160]))
     wired = {(e, c.split('trace_heartbeat.py"')[1].strip()) for e, c in commands() if "trace_heartbeat.py" in c}
     need = {(e, "") for e in ("UserPromptSubmit", "PreToolUse", "PostToolUse", "PostToolUseFailure",
-                              "PermissionRequest", "Stop", "StopFailure", "SessionEnd")}
+                              "PermissionRequest", "Stop", "StopFailure", "SessionEnd", "SubagentStart", "SubagentStop")}
     need |= {("Notification", "waiting"), ("Notification", "done")}
     results.append(("heartbeat is registered for every state event", wired == need, 0, f"missing {need - wired}, extra {wired - need}"))
     shutil.rmtree(tmp, ignore_errors=True)
