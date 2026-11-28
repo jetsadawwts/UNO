@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.package]
 # Same number as plugins/core/.claude-plugin/plugin.json (tests/version.rs checks it).
-version = "0.5.22"
+version = "0.5.23"
 edition = "2021"
 # notify-types 2.3 needs 1.91; clap 4.6 needs edition 2024 (1.85)
 rust-version = "1.91"

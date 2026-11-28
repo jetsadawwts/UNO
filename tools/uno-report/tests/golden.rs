@@ -42,7 +42,7 @@ fn file_page_has_no_live_script() {
     assert!(!page.contains("fetch('/version'"), "polling belongs to the live page only");
 }
 
-/// The embedded Office art (25 WebP images, ~500 KB of base64); keep it out of the saved copy.
+/// The embedded Office art (27 WebP images, ~500 KB of base64); keep it out of the saved copy.
 fn without_picture(page: &str) -> String {
     let head = "data:image/webp;base64,";
     let (mut out, mut rest, mut n) = (String::new(), page, 0);
@@ -55,6 +55,6 @@ fn without_picture(page: &str) -> String {
         rest = &rest[end..];
         n += 1;
     }
-    assert_eq!(n, 25, "floor, people, Uno's desk, 11 chairs, 11 desks");
+    assert_eq!(n, 27, "floor, people, Uno's desk, 12 chairs, 12 desks");
     out + rest
 }

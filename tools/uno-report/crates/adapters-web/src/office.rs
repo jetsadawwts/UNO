@@ -7,7 +7,9 @@
 //! - agent calls in `audit.log` (Uno → member, description) — the hand-off list and animation;
 //! - the status in `tasks.md` of each task id seen in a live line — the stage bar.
 //!
-//! Where idle members walk to is decoration, not data; the page says so.
+//! While any Claude Code session is open (online) every member sits at their desk; Uno walks out to
+//! a member's desk for each hand-off. Offline, everyone (Uno too) goes to the lounge: where they
+//! go is decoration, not data; the page says so.
 use domain::{Handoff, Live, Project};
 
 use crate::*;
@@ -16,25 +18,25 @@ const FLOOR: &[u8] = include_bytes!("../../../assets/office/floor.webp");
 const PEOPLE: &[u8] = include_bytes!("../../../assets/office/people.webp");
 const CEO_DESK: &[u8] = include_bytes!("../../../assets/office/ceo-desk.webp");
 const LAYOUT: &str = include_str!("../../../assets/office/layout.json");
-const CHAIRS: [&[u8]; 11] = [
+const CHAIRS: [&[u8]; 12] = [
     include_bytes!("../../../assets/office/chair01.webp"), include_bytes!("../../../assets/office/chair02.webp"),
     include_bytes!("../../../assets/office/chair03.webp"), include_bytes!("../../../assets/office/chair04.webp"),
     include_bytes!("../../../assets/office/chair05.webp"), include_bytes!("../../../assets/office/chair06.webp"),
     include_bytes!("../../../assets/office/chair07.webp"), include_bytes!("../../../assets/office/chair08.webp"),
     include_bytes!("../../../assets/office/chair09.webp"), include_bytes!("../../../assets/office/chair10.webp"),
-    include_bytes!("../../../assets/office/chair11.webp"),
+    include_bytes!("../../../assets/office/chair11.webp"), include_bytes!("../../../assets/office/chair12.webp"),
 ];
-const DESKS: [&[u8]; 11] = [
+const DESKS: [&[u8]; 12] = [
     include_bytes!("../../../assets/office/desk01.webp"), include_bytes!("../../../assets/office/desk02.webp"),
     include_bytes!("../../../assets/office/desk03.webp"), include_bytes!("../../../assets/office/desk04.webp"),
     include_bytes!("../../../assets/office/desk05.webp"), include_bytes!("../../../assets/office/desk06.webp"),
     include_bytes!("../../../assets/office/desk07.webp"), include_bytes!("../../../assets/office/desk08.webp"),
     include_bytes!("../../../assets/office/desk09.webp"), include_bytes!("../../../assets/office/desk10.webp"),
-    include_bytes!("../../../assets/office/desk11.webp"),
+    include_bytes!("../../../assets/office/desk11.webp"), include_bytes!("../../../assets/office/desk12.webp"),
 ];
 
-/// Name and role (English, Thai), in sprite-sheet row order (`people.webp`, `desk01..11`).
-pub(crate) const MEMBERS: [(&str, &str, &str); 12] = [
+/// Name and role (English, Thai), in sprite-sheet row order (`people.webp`, `desk01..12`).
+pub(crate) const MEMBERS: [(&str, &str, &str); 13] = [
     ("Uno", "Lead · chief of staff", "หัวหน้าทีม"),
     ("Alpha", "Intake triage", "คัดแยกงานเข้า"),
     ("Beta", "Codebase explorer", "สำรวจโค้ด"),
@@ -47,6 +49,7 @@ pub(crate) const MEMBERS: [(&str, &str, &str); 12] = [
     ("Iota", "DevOps engineer", "DevOps"),
     ("Kappa", "Data engineer", "วิศวกรข้อมูล"),
     ("Lambda", "Architect", "สถาปนิกระบบ"),
+    ("Mu", "Developer", "นักพัฒนา (เขียนโค้ด)"),
 ];
 
 /// Most hand-offs listed.
@@ -100,6 +103,8 @@ fn member(kind: &str, who: &str, line: Option<(&str, &Live)>) -> String {
 /// line, the latest hand-offs, and the status of each task id seen in a line. No visible text.
 pub(crate) fn office(projects: &[&Project]) -> String {
     let mut out = String::from("<div class=\"ofc-data\" hidden>");
+    // Open Claude Code sessions across projects: members sit at their desks while any is open.
+    out += &format!("<i class=\"s\" data-open=\"{}\"></i>", projects.iter().map(|p| p.sessions).sum::<usize>());
     for (name, _, _) in MEMBERS {
         out += &member("m", name, newest(projects, name));
     }
@@ -180,8 +185,8 @@ pub(crate) fn office_page(projects: &[&Project]) -> String {
         t("Uno's room", "ห้อง Uno"), t("Show names", "แสดงชื่อ"),
         t("Team", "ทีม"), t("Needs you", "ต้องดู"), t("Hand-offs from Uno", "การส่งงานจาก Uno"),
         office(projects),
-        t("Away means no signal from UNO's hooks in the last 30 minutes. Where away members walk to (kitchen, lounge, restroom and so on) is decoration, not data.",
-          "ว่าง หมายถึงไม่มีสัญญาณจาก hook ของ UNO ใน 30 นาทีล่าสุด ที่ที่คนว่างเดินไป (ห้องครัว ห้องพักผ่อน ห้องน้ำ ฯลฯ) เป็นของตกแต่ง ไม่ได้มาจากข้อมูลจริง"))
+        t("While a Claude Code session with UNO is open, the team sits at their desks; Uno walks to a member's desk for each hand-off. Offline (no session open in the last 30 minutes) everyone goes to the lounge: where they go (kitchen, lounge, restroom and so on) is decoration, not data.",
+          "ระหว่างที่มี session ของ Claude Code ที่ใช้ UNO เปิดอยู่ ทีมจะนั่งที่โต๊ะ และ Uno เดินไปที่โต๊ะลูกทีมทุกครั้งที่ส่งงาน ตอนออฟไลน์ (ไม่มี session เปิดใน 30 นาทีล่าสุด) ทุกคนไปห้องพัก ที่ที่เดินไป (ห้องครัว ห้องพักผ่อน ห้องน้ำ ฯลฯ) เป็นของตกแต่ง ไม่ได้มาจากข้อมูลจริง"))
 }
 
 fn base64(bytes: &[u8]) -> String {
@@ -234,7 +239,7 @@ mod tests {
     #[test]
     fn style_carries_all_art_and_the_layout() {
         let s = office_style();
-        assert_eq!(s.matches("data:image/webp;base64,UklGR").count(), 3 + 11 + 11, "floor, people, ceo, chairs, desks");
+        assert_eq!(s.matches("data:image/webp;base64,UklGR").count(), 3 + 12 + 12, "floor, people, ceo, chairs, desks");
         assert!(s.contains("layout:{") && s.contains("\"desks\"") && s.contains("\"seat\""));
     }
 
@@ -248,6 +253,17 @@ mod tests {
             at = i;
         }
         assert!(html.starts_with("<div class=\"ofc-data\" hidden>") && html.ends_with("</div>"));
+    }
+
+    #[test]
+    fn open_sessions_are_summed_for_online() {
+        let (mut a, mut b) = (project("a", &[]), project("b", &[]));
+        a.sessions = 2;
+        b.sessions = 1;
+        assert!(office(&[&a, &b]).contains("<i class=\"s\" data-open=\"3\"></i>"));
+        b.sessions = 0;
+        a.sessions = 0;
+        assert!(office(&[&a, &b]).contains("data-open=\"0\""));
     }
 
     #[test]
