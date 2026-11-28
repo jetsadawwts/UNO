@@ -240,7 +240,7 @@ function arrive(c){c.at=c.goal;c.goal=null;c.t=0;if(c.at===c.seat){if(c.uno)c.er
  if(c.uno&&c.errand&&c.at===c.errand.node){c.face='front';c.until=Date.now()+4000;deliver(c.errand);return}
  var sp=spotOf(c.at);c.face=sp?sp[3]:'front';
  if(c.at==='DOOR'){c.until=Date.now()+3500;return}
- c.until=Date.now()+(sp&&sp[3]==='door'?7000+Math.random()*7000:14000+Math.random()*18000);if(sp&&sp[3]==='door')c.m.classList.add('away')}
+ /* offline: short stops so people keep walking around */c.until=Date.now()+(sp&&sp[3]==='door'?4000+Math.random()*4000:3000+Math.random()*5000);if(sp&&sp[3]==='door')c.m.classList.add('away')}
 /* data */
 var SEL='Uno',handSeen=null,QUEUE=[],BUSY=0,REPLAY=600000,LAST={};
 setInterval(function(){if(QUEUE.length&&Date.now()>BUSY&&!C[0].errand){BUSY=Date.now()+1500;handOff(QUEUE.shift())}},500);
@@ -248,21 +248,24 @@ function data(){var out={m:{},h:[],t:{},w:[],n:[],open:0};document.querySelector
  document.querySelectorAll('#ofc-data .h').forEach(function(e){out.h.push(e.dataset)});document.querySelectorAll('#ofc-data .w').forEach(function(e){out.w.push(e.dataset)});document.querySelectorAll('#ofc-data .n').forEach(function(e){out.n.push(e.dataset)});document.querySelectorAll('#ofc-data .t').forEach(function(e){out.t[e.dataset.project+'/'+e.dataset.id]=e.dataset});return out}
 var DATA=data(),ONLINE=false;
 /* online: a Claude Code session is open (or any fresh line); then everyone sits, else everyone goes to the lounge */
+/* who sits: Uno while a session is open; a member only while working (a fresh line) or receiving a hand-off */
+function wants(c){return c.uno?ONLINE:!!(c.info||c.handoff)}
 function online(){if(DATA.open>0)return true;for(var k in DATA.m)if(DATA.m[k])return true;return false}
 function read(){DATA=data();ONLINE=online();DATA.h.slice().reverse().forEach(function(h){LAST[h.who]=h});
  C.forEach(function(c){var m=DATA.m[c.n];c.info=m;
   if(c.handoff){c.bub.innerHTML=svg('agent')+esc(tx(['new task','รับงาน']));c.tag.className='ofc-tag hand'}
   else if(m){var k=iconFor(m);c.bub.innerHTML=svg(k)+esc(m.task||'');c.tag.className='ofc-tag'+(k==='wait'?' alert':k==='err'?' err':k==='done'?' done':'')}
   else{c.bub.innerHTML='';c.tag.className='ofc-tag idle'}
-  if(!c.seen){c.seen=true;jump(c,ONLINE?c.seat:pick());return}
-  if(c.errand||c.handoff)return;
-  if(ONLINE&&c.goal!==c.seat&&c.at!==c.seat)go(c,c.seat);
-  if(!ONLINE&&(c.at===c.seat||c.goal===c.seat))go(c,pick())});
+  if(!c.seen){c.seen=true;jump(c,wants(c)?c.seat:pick());return}
+  if(c.errand)return;
+  if(wants(c)&&c.goal!==c.seat&&c.at!==c.seat)go(c,c.seat);
+  if(!wants(c)&&(c.at===c.seat||c.goal===c.seat))go(c,pick())});
  var keys=DATA.h.map(function(h){return h.time+'|'+h.who});
  if(handSeen===null){handSeen=keys;DATA.h.filter(function(h){return Date.now()-Date.parse(h.time)<=REPLAY}).slice(0,3).reverse().forEach(function(h){QUEUE.push(h)})}
  else{keys.forEach(function(k,i){if(handSeen.indexOf(k)<0)QUEUE.push(DATA.h[i])});handSeen=keys}
  panels()}
 function handOff(h){var b=C.find(function(c){return c.n===h.who});if(!b||b.uno)return;LAST[b.n]=h;var a=C[0];
+ b.handoff=true;if(b.at!==b.seat&&b.goal!==b.seat)go(b,b.seat);
  a.errand={h:h,b:b,node:'b'+b.i};if(!ONLINE||!NODE[a.errand.node]){a.errand=null;deliver({h:h,b:b});return}go(a,a.errand.node)}
 function deliver(e){var b=e.b,a=C[0];
  var A0=[a.x,a.y-PH*.8],B0=[b.x,b.y-PH];line.setAttribute('d','M'+A0[0]+' '+A0[1]+' Q'+((A0[0]+B0[0])/2)+' '+(Math.min(A0[1],B0[1])-80)+' '+B0[0]+' '+B0[1]);line.classList.add('on');
@@ -285,7 +288,7 @@ function handCard(h){var parts=[],n={read:0,bash:0,edit:0,other:0};
  return '<li><b>Uno → '+esc(h.who)+'</b> '+esc(h.desc)+'<div class="ofc-tl">'+line+'</div><span class="muted">'+esc(ago(h.time))+' · '+esc(h.project)+'</span></li>'}
 function svgSmall(k){return ICON[k==='other'?'think':k]?'<svg class="ofc-ti" viewBox="0 0 24 24" aria-hidden="true">'+ICON[k==='other'?'think':k]+'</svg>':''}
 /* panels */
-function stateOf(c){if(!c.info)return ['i',ONLINE?tx(['free, at the desk','ว่าง (นั่งโต๊ะ)']):tx(['offline','ออฟไลน์'])];var k=iconFor(c.info);return [k==='wait'?'a':k==='err'?'e':'w',(c.info.task?c.info.task+' · ':'')+tx(TXT[k])]}
+function stateOf(c){if(!c.info)return ['i',!ONLINE?tx(['offline','ออฟไลน์']):c.uno?tx(['free, in his office','ว่าง (อยู่ในห้อง)']):tx(['free, taking a break','ว่าง (พักอยู่)'])];var k=iconFor(c.info);return [k==='wait'?'a':k==='err'?'e':'w',(c.info.task?c.info.task+' · ':'')+tx(TXT[k])]}
 function panels(){var w=0,b=0,a=0,ro=document.getElementById('ofc-roster'),err=[],wait=[];ro.innerHTML='';
  C.forEach(function(c){var s=stateOf(c);if(s[0]==='i')a++;else if(s[0]==='w')w++;else{(s[0]==='e'?err:wait).push('<li class="ofc-n-'+s[0]+'"><b>'+esc(c.n)+'</b> · '+esc(s[1])+(c.info&&c.info.project?' <span class="muted">· '+esc(c.info.project)+'</span>':'')+'</li>')}
   var bt=document.createElement('button');bt.type='button';if(c.n===SEL)bt.className='sel';
@@ -296,7 +299,7 @@ function panels(){var w=0,b=0,a=0,ro=document.getElementById('ofc-roster'),err=[
  var must=err.concat(wait,turns);b=must.length+DATA.n.length;
  document.getElementById('ofc-must').innerHTML=(must.join('')+tasks)||'<li class="muted">'+esc(tx(['Nothing','ไม่มี']))+'</li>';
  document.getElementById('ofc-stats').innerHTML=[[w,['Working','กำลังทำงาน'],['Including Uno','รวม Uno']],[b,['Needs you','ต้องดู'],['Replies, approvals, reviews, errors','รอคุณตอบ อนุมัติ รีวิว หรือ error']],
-  ONLINE?[a,['Free','ว่าง'],['At their desks, no task now','นั่งโต๊ะ ยังไม่มีงาน']]:[a,['Offline','ออฟไลน์'],['No Claude Code session open','ไม่มี session ของ Claude Code เปิดอยู่']]].map(function(x){return '<div class="ofc-stat"><b class="n">'+x[0]+'</b><b>'+esc(tx(x[1]))+'</b><span>'+esc(tx(x[2]))+'</span></div>'}).join('');
+  ONLINE?[a,['Free','ว่าง'],['No task now, taking a break','ยังไม่มีงาน กำลังพัก']]:[a,['Offline','ออฟไลน์'],['No Claude Code session open','ไม่มี session ของ Claude Code เปิดอยู่']]].map(function(x){return '<div class="ofc-stat"><b class="n">'+x[0]+'</b><b>'+esc(tx(x[1]))+'</b><span>'+esc(tx(x[2]))+'</span></div>'}).join('');
  var c=C.find(function(x){return x.n===SEL}),s=stateOf(c),where=c.at===c.seat?(c.uno?tx(["Uno's office",'ห้อง Uno']):tx(['at the desk','ที่โต๊ะ'])):c.errand&&c.at===c.errand.node?tx(["at "+c.errand.b.n+"'s desk",'ที่โต๊ะ '+c.errand.b.n]):c.at&&PLACE[c.at]?tx(PLACE[c.at]):tx(['walking','กำลังเดิน']);
  document.getElementById('ofc-detail').innerHTML='<div><b style="font-size:17px">'+esc(c.n)+'</b><small>'+esc(tx(ROLES[c.n]))+'</small></div><div><small>'+esc(tx(['Now','ตอนนี้']))+'</small>'+esc(s[1])+
   (c.info&&c.info.project?' <span class="muted">· '+esc(c.info.project)+'</span>':'')+'</div><div><small>'+esc(tx(['Where','อยู่ที่']))+'</small>'+esc(where)+'</div>'+(LAST[c.n]?'<div><small>'+esc(tx(['Last task from Uno','งานล่าสุดจาก Uno']))+'</small>'+esc(LAST[c.n].desc)+' <span class="muted">· '+esc(ago(LAST[c.n].time))+'</span></div>':'');
@@ -315,7 +318,7 @@ function step(now){var dt=Math.min(.1,(now-last)/1000),ms=Date.now();last=now;
   else if(c.at===c.seat){h=Math.round(PH*(c.uno?.72:.75));top=c.y-h;z=c.uno?L.ceo.z-10:c.dz-1}
   else{f=c.face==='back'?3:0;top=c.y-PH;z=Math.round(c.y);
    if(c.uno&&c.errand&&c.at===c.errand.node){if(ms>c.until){var back=ONLINE?c.seat:pick();c.errand.node=null;go(c,back);if(back!==c.seat)c.errand=null}}
-   else if(ms>c.until&&!ONLINE)go(c,pick())}
+   else if(ms>c.until&&!wants(c))go(c,pick())}
   c.m.style.backgroundPosition=(-f*PW)+'px '+(-c.i*PH)+'px';c.m.style.height=h+'px';c.m.style.left=(c.x-PW/2)+'px';c.m.style.top=top+'px';c.m.style.zIndex=z;
   c.tag.style.left=c.x+'px';c.tag.style.top=(top-2)+'px'});
  requestAnimationFrame(step)}

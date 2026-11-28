@@ -7,9 +7,10 @@
 //! - agent calls in `audit.log` (Uno → member, description) — the hand-off list and animation;
 //! - the status in `tasks.md` of each task id seen in a live line — the stage bar.
 //!
-//! While any Claude Code session is open (online) every member sits at their desk; Uno walks out to
-//! a member's desk for each hand-off. Offline, everyone (Uno too) goes to the lounge: where they
-//! go is decoration, not data; the page says so.
+//! A member sits at their desk only while working (a fresh line) or receiving a hand-off; Uno walks
+//! out to that desk for each hand-off and otherwise stays in his office while any Claude Code
+//! session is open. Everyone else takes a break around the office: where they go is decoration,
+//! not data; the page says so.
 use domain::{Handoff, Live, Project};
 
 use crate::*;
@@ -185,8 +186,8 @@ pub(crate) fn office_page(projects: &[&Project]) -> String {
         t("Uno's room", "ห้อง Uno"), t("Show names", "แสดงชื่อ"),
         t("Team", "ทีม"), t("Needs you", "ต้องดู"), t("Hand-offs from Uno", "การส่งงานจาก Uno"),
         office(projects),
-        t("While a Claude Code session with UNO is open, the team sits at their desks; Uno walks to a member's desk for each hand-off. Offline (no session open in the last 30 minutes) everyone goes to the lounge: where they go (kitchen, lounge, restroom and so on) is decoration, not data.",
-          "ระหว่างที่มี session ของ Claude Code ที่ใช้ UNO เปิดอยู่ ทีมจะนั่งที่โต๊ะ และ Uno เดินไปที่โต๊ะลูกทีมทุกครั้งที่ส่งงาน ตอนออฟไลน์ (ไม่มี session เปิดใน 30 นาทีล่าสุด) ทุกคนไปห้องพัก ที่ที่เดินไป (ห้องครัว ห้องพักผ่อน ห้องน้ำ ฯลฯ) เป็นของตกแต่ง ไม่ได้มาจากข้อมูลจริง"))
+        t("A member sits at their desk only while working on something from Uno; Uno walks to that desk for each hand-off. The rest of the time members take a break around the office. Uno stays in his office while a Claude Code session with UNO is open (offline: no session in the last 30 minutes, then he takes a break too). Where people go on a break (kitchen, lounge, restroom and so on) is decoration, not data.",
+          "ลูกทีมจะนั่งโต๊ะเฉพาะตอนที่กำลังทำงานที่ Uno ส่งมา และ Uno จะเดินไปที่โต๊ะนั้นทุกครั้งที่ส่งงาน เวลาอื่นลูกทีมเดินพักอยู่ในออฟฟิศ Uno อยู่ในห้องตัวเองระหว่างที่มี session ของ Claude Code ที่ใช้ UNO เปิดอยู่ (ออฟไลน์ คือไม่มี session ใน 30 นาทีล่าสุด Uno ก็ไปพักด้วย) ที่ที่เดินไปพัก (ห้องครัว ห้องพักผ่อน ห้องน้ำ ฯลฯ) เป็นของตกแต่ง ไม่ได้มาจากข้อมูลจริง"))
 }
 
 fn base64(bytes: &[u8]) -> String {
